@@ -337,7 +337,6 @@ MODULE module_sf_urban
 
    REAL, INTENT(IN)    :: XLAT ! latitude                               [deg]
    REAL, INTENT(IN)    :: DELT ! time step                              [s]
-   REAL, INTENT(IN)    :: ZNT  ! roughness length                       [m]
    REAL, INTENT(IN)    :: CHS,CHS2 ! CH*U at za and 2 m             [m/s]
 
    REAL, INTENT(INOUT) :: SSGD ! downward direct short wave radiation   [W/m/m]
@@ -346,6 +345,7 @@ MODULE module_sf_urban
    REAL, INTENT(INOUT) :: CHR_URB
    REAL, INTENT(INOUT) :: CMC_URB
    REAL, INTENT(INOUT) :: CHC_URB
+   REAL, INTENT(INOUT) :: ZNT  ! roughness length                       [m]    ! modified by danli
 !-------------------------------------------------------------------------------
 ! I: NUDAPT Input Parameters
 !-------------------------------------------------------------------------------
@@ -487,7 +487,7 @@ MODULE module_sf_urban
 
    REAL :: TRP, TBP, TGP, TCP, QCP, TST, QST
 
-   REAL :: WDR,HGT2,BW,DHGT
+   REAL :: WDR,HGT2,HNORM,DHGT
    REAL, parameter :: VonK = 0.4
    REAL :: lambda_f,alpha_macd,beta_macd,lambda_fr
 
@@ -517,149 +517,110 @@ MODULE module_sf_urban
                    AKANDA_URBAN)
 
 ! Glotfelty, 2012/07/05, NUDAPT Modification
+! Attema, 2014/07/24, WUR/NUDAPT Modification
 
- if(mh_urb.gt.0.0)THEN 
-  !write(mesg,*) 'Mean Height NUDAPT',mh_urb
-  !call wrf_message(mesg)
-  !write(mesg,*) 'Mean Height Table',ZR
-  !call wrf_message(mesg)
-  if(zo_check.eq.1)THEN
-   write(mesg,*) 'Mean Height NUDAPT',mh_urb
-   call wrf_message(mesg)
-   write(mesg,*) 'Mean Height Table',ZR
-   call wrf_message(mesg)
-   write(mesg,*) 'Roughness Length Table',Z0C
-   call wrf_message(mesg)
-   write(mesg,*) 'Roof Roughness Length Table',Z0R
-   call wrf_message(mesg)
-   write(mesg,*) 'Sky View Factor Table',SVF
-   call wrf_message(mesg)
-   write(mesg,*) 'Normalized Height Table',HGT
-   call wrf_message(mesg)
-   write(mesg,*) 'Plan Area Fraction', lp_urb
-   call wrf_message(mesg)
-   write(mesg,*) 'Plan Area Fraction table', R
-   call wrf_message(mesg)
-  end if
-  !write(mesg,*) 'Area Weighted Mean Height',hgt_urb
-  !call wrf_message(mesg)
-  !write(mesg,*) 'Plan Area Fraction', lp_urb
-  !call wrf_message(mesg)
-  !write(mesg,*) 'STD Height', stdh_urb
-  !call wrf_message(mesg)
-  !write(mesg,*) 'Frontal Area Index',lf_urb
-  !call wrf_message(mesg)
-  !write(mesg,*) 'Urban Fraction',frc_urb
-  !call wrf_message(mesg)
-  !write(mesg,*) 'Building Surf Ratio',lb_urb
-  !call wrf_message(mesg)
- 
- !Calculate Building Width and Street Width Based on BEP formulation
- if(lb_urb.gt.lp_urb)THEN
-  BW=2.*hgt_urb*lp_urb/(lb_urb-lp_urb)
-  SW=2.*hgt_urb*lp_urb*((frc_urb/lp_urb)-1.)/(lb_urb-lp_urb)
-  !write(mesg,*) 'Building Width',BW
-  !call wrf_message(mesg)
-  !write(mesg,*) 'Street Width',SW
-  !call wrf_message(mesg)
- elseif (SW.lt.0.0.or.BW.lt.0.0)then
-  BW=BUILDING_WIDTH(1)
-  SW=STREET_WIDTH(1)
- else
-    BW=BUILDING_WIDTH(1)
-  SW=STREET_WIDTH(1)
- end if
- 
- !Assign NUDAPT Parameters
-   ZR = mh_urb
-    R = lp_urb
-    RW = 1.0-R
-   HGT = mh_urb/(BW+SW)
-   SIGMA_ZED = stdh_urb
+!-------------------------------------------------------------------------------
+! Start WUR Modification
+!-------------------------------------------------------------------------------
 
- !Calculate Wind Direction and Assign Appropriae lf_urb
-   !WDR = (180.0/PI)*ATAN2(U10,V10)
-   
+  ! Calculate normalization height based on BEP formulation
+
+  IF(lb_urb .GT. lp_urb)THEN
+   HNORM = 2. * hgt_urb * frc_urb  / (lb_urb - lp_urb)
+   HNORM = MAX( 0.01, MIN( 100.0, HNORM ) )
+  ELSE
+   ! WRITE(mesg,*) 'Cannot normalize height: lb_urb is smaller than lp_urb. Setting HNORM=10.0'
+   ! CALL wrf_message(mesg)
+   HNORM = 10.0
+  ENDIF
+ 
+  ! Assign NUDAPT Parameters
+
+  ZR = MAX( 0.01, MIN(hgt_urb,100.0) )
+  IF(frc_urb .GT. 0)THEN
+   R = MAX( MIN(lp_urb/frc_urb, 0.9), 0.1 )
+  ELSE
+   R = 0.5
+  ENDIF
+  RW = 1.0-R
+  HGT = ZR/HNORM
+
+  SIGMA_ZED = max( 1.0, min( stdh_urb, 10.0 ) )
+
+  ! Calculate Wind Direction and Assign Appropriae lf_urb
+
+  WDR = (45.0/ATAN(1.0))*ATAN2(U10,V10)+180.
+ 
+  IF(frc_urb .gt. 0) THEN
    IF(WDR.ge.0.0.and.WDR.lt.22.5)THEN
-     lambda_f = lf_urb(1)
-   ELSEIF(WDR.ge.-22.5.and.WDR.lt.0.0)THEN
-     lambda_f = lf_urb(1)
-   ELSEIF(WDR.gt.157.5.and.WDR.le.180.0)THEN
-     lambda_f = lf_urb(1)
-   ELSEIF(WDR.lt.-157.5)THEN
-     lambda_f = lf_urb(1)
-   ELSEIF(WDR.gt.22.5.and.WDR.le.67.5)THEN
-     lambda_f = lf_urb(2)
-   ELSEIF(WDR.ge.-67.5.and.WDR.lt.-22.5)THEN
-     lambda_f = lf_urb(2)
-   ELSEIF(WDR.gt.67.5.and.WDR.le.112.5)THEN
-     lambda_f = lf_urb(3)
-   ELSEIF(WDR.ge.-112.5.and.WDR.lt.-67.5)THEN
-     lambda_f = lf_urb(3)
-   ELSEIF(WDR.gt.112.5.and.WDR.le.157.5)THEN
-     lambda_f = lf_urb(4)
-   ELSEIF(WDR.ge.-157.5.and.WDR.lt.-112.5)THEN
-     lambda_f = lf_urb(4)
+     lambda_f = lf_urb(1)/frc_urb ! 0/180  
+   ELSEIF(WDR.ge.22.5.and.WDR.lt.67.5)THEN
+     lambda_f = lf_urb(2)/frc_urb !45/225
+   ELSEIF(WDR.ge.67.5.and.WDR.lt.112.5)THEN
+     lambda_f = lf_urb(3)/frc_urb !90/270
+   ELSEIF(WDR.ge.112.5.and.WDR.lt.157.5)THEN
+     lambda_f = lf_urb(4)/frc_urb ! 135/315
+   ELSEIF(WDR.ge.157.5.and.WDR.lt.202.5)THEN
+     lambda_f = lf_urb(1)/frc_urb ! 0/180      
+   ELSEIF(WDR.ge.202.5.and.WDR.lt.247.5)THEN
+     lambda_f = lf_urb(2)/frc_urb ! 45/225 
+   ELSEIF(WDR.ge.247.5.and.WDR.lt.292.5)THEN
+     lambda_f = lf_urb(3)/frc_urb !90/270 
+   ELSEIF(WDR.ge.292.5.and.WDR.lt.337.5)THEN
+     lambda_f = lf_urb(4)/frc_urb !135/315) 
+   ELSEIF(WDR.ge.337.5.and.WDR.le.360.)THEN
+     lambda_f = lf_urb(1)/frc_urb !0/180
    ELSE
-     lambda_f = lf_urb(1)
+     WRITE(mesg,*) 'Invalid wind direction: 0/180 is selected instead'
+     lambda_f = lf_urb(1)/frc_urb
    ENDIF
+  ELSE
+     lambda_f = 0.1
+  ENDIF
 
-  !Calculate the following urban canyon geometry parameters following Macdonald's (1998) formulations
-      Cd         = 1.2
-      alpha_macd = 4.43
-      beta_macd  = 1.0
+  lambda_f = max( 0.05, min( 0.35, lambda_f ) )
 
+  ! Calculate the following urban canyon geometry parameters following Macdonald's (1998) formulations
 
-      ZDC = ZR * ( 1.0 + ( alpha_macd ** ( -R ) )  * ( R - 1.0 ) )
+  Cd         = 1.2
+  alpha_macd = 4.43
+  beta_macd  = 1.0
 
-      Z0C = ZR * ( 1.0 - ZDC/ZR ) * &
-           exp (-(0.5 * beta_macd * Cd / (VonK**2) * ( 1.0-ZDC/ZR) * lambda_f )**(-0.5))
-     
-      if(zo_check.eq.1)THEN
-        write(mesg,*) 'Roughness Length NUDAPT',Z0C
-        call wrf_message(mesg)
-      end if
+  ZDC = ZR * ( 1.0 + ( alpha_macd ** ( -R ) )  * ( R - 1.0 ) )
 
-      lambda_fr  = stdh_urb/(SW + BW)
+  Z0C = ZR * ( 1.0 - ZDC/ZR ) * &
+       exp (-(0.5 * beta_macd * Cd / (VonK**2) * ( 1.0-ZDC/ZR) * lambda_f )**(-0.5))
 
-       Z0R = ZR * ( 1.0 - ZDC/ZR) &
-             * exp ( -(0.5 * beta_macd * Cd / (VonK**2) &
-              * ( 1.0-ZDC/ZR) * lambda_fr )**(-0.5))
+  ! Clamp between 10 cm and 20 m
+  lambda_fr = max( 0.05, min( 0.35, stdh_urb/HNORM ) )
 
-    
+  Z0R = ZR * ( 1.0 - ZDC/ZR) &
+           * exp ( -(0.5 * beta_macd * Cd / (VonK**2) &
+           * ( 1.0-ZDC/ZR) * lambda_fr )**(-0.5))
 
-       Z0HC = 0.1 * Z0C
+  Z0HC = 0.1 * Z0C
 
   ! Calculate Sky View Factor
 
-     DHGT=HGT/100.
-     HGT2=0.
-     VFWS=0.
-     HGT2=HGT-DHGT/2.
-      do NUDAPT=1,99
-         HGT2=HGT2-DHGT
-         VFWS=VFWS+0.25*(1.-HGT2/SQRT(HGT2**2.+RW**2.))
-      end do
+  ! FIXME: should HGT not be ZR? ie. not normalized?
+  DHGT=HGT/100.
+  HGT2=0.
+  VFWS=0.
+  HGT2=HGT-DHGT/2.
+  DO NUDAPT=1,99
+   HGT2=HGT2-DHGT
+   VFWS=VFWS+0.25*(1.-HGT2/SQRT(HGT2**2.+RW**2.))
+  END DO
 
-     VFWS=VFWS/99.
-     VFWS=VFWS*2.
+  VFWS=VFWS/99.
+  VFWS=VFWS*2.
 
-     VFGS=1.-2.*VFWS*HGT/RW
-     SVF=VFGS
+  VFGS=1.-2.*VFWS*HGT/RW
+  SVF=VFGS
 
-    if(zo_check.eq.1)THEN
-      write(mesg,*) 'Roof Roughness Length NUDAPT',Z0R
-      call wrf_message(mesg)
-      write(mesg,*) 'Sky View Factor NUDAPT',SVF
-      call wrf_message(mesg)
-      write(mesg,*) 'normalized Height NUDAPT', HGT
-      call wrf_message(mesg)
-    end if
-
-
- endif
-
- !End NUDAPT Modification
+!-------------------------------------------------------------------------------
+! End WUR Modification
+!-------------------------------------------------------------------------------
 
 
 ! Miao, 2007/01/17, cal. ah
@@ -1180,6 +1141,7 @@ MODULE module_sf_urban
    Z0 = Z0C 
    Z0H = Z0HC
    Z = ZA - ZDC
+   ZNT = Z0   ! add by Dan Li
 
    XXX = 0.4*9.81*Z*TST/TA/UST/UST
 
@@ -2158,7 +2120,7 @@ MODULE module_sf_urban
    REAL, DIMENSION(ims:ime, kms:kme, jms:jme), INTENT(INOUT) :: B_E_BEP
    REAL, DIMENSION(ims:ime, kms:kme, jms:jme), INTENT(INOUT) :: VL_BEP
    REAL, DIMENSION(ims:ime, kms:kme, jms:jme), INTENT(INOUT) :: DLG_BEP
-   REAL, DIMENSION(ims:ime, kms:kme,jms:jme),INTENT(INOUT) :: SF_BEP
+   REAL, DIMENSION(ims:ime, kms:kme, jms:jme), INTENT(INOUT) :: SF_BEP
    REAL, DIMENSION(ims:ime, kms:kme, jms:jme), INTENT(INOUT) :: DL_U_BEP
 !
    REAL, DIMENSION( ims:ime, jms:jme ), INTENT(INOUT) :: FRC_URB2D
@@ -2189,40 +2151,18 @@ MODULE module_sf_urban
       UTYPE_URB2D(I,J)=0
       SWITCH_URB=0
 
-            IF( IVGTYP(I,J) == ISURBAN)  THEN
-               UTYPE_URB2D(I,J) = 2  ! for default. high-intensity
-               UTYPE_URB = UTYPE_URB2D(I,J)  ! for default. high-intensity
-               IF (HGT_URB2D(I,J)>0.) THEN
-                  CONTINUE
-               ELSE
-                  WRITE(mesg,*) 'USING DEFAULT URBAN MORPHOLOGY'
-                  call wrf_message(mesg)
-                  LP_URB2D(I,J)=0.
-                  LB_URB2D(I,J)=0.
-                  HGT_URB2D(I,J)=0.
-                  IF ( sf_urban_physics == 1 ) THEN
-                     MH_URB2D(I,J)=0.
-                     STDH_URB2D(I,J)=0.
-                     DO K=1,4
-                       LF_URB2D(I,K,J)=0.
-                     ENDDO
-                  ELSE IF ( ( sf_urban_physics == 2 ) .or. ( sf_urban_physics == 3 ) ) THEN
-                     DO K=1,num_urban_hi
-                        HI_URB2D(I,K,J)=0.
-                     ENDDO
-                  ENDIF
-               ENDIF
-                IF (FRC_URB2D(I,J)>0.and.FRC_URB2D(I,J)<=1.) THEN
-                  CONTINUE
-                ELSE
-                  WRITE(mesg,*) 'WARNING, FRC_URB2D = 0 BUT IVGTYP IS URBAN'
-                  call wrf_message(mesg)
-                  WRITE(mesg,*) 'WARNING, THE URBAN FRACTION WILL BE READ FROM URBPARM.TBL'
-                  call wrf_message(mesg)
-                  FRC_URB2D(I,J) = FRC_URB_TBL(UTYPE_URB)
-                ENDIF           
-               SWITCH_URB=1
-            ENDIF 
+!-------------------------------------------------------------------------------
+! Start WUR Modification
+!-------------------------------------------------------------------------------
+      IF( IVGTYP(I,J) == ISURBAN)  THEN
+         UTYPE_URB2D(I,J) = 2          ! for default. high-intensity
+         UTYPE_URB = UTYPE_URB2D(I,J)  ! for default. high-intensity
+
+         SWITCH_URB=1
+      ENDIF 
+!-------------------------------------------------------------------------------
+! End WUR Modification
+!-------------------------------------------------------------------------------
 
             IF( IVGTYP(I,J) == 31) THEN
                UTYPE_URB2D(I,J) = 3  ! low-intensity residential
@@ -2526,9 +2466,6 @@ MODULE module_sf_urban
         CHECK = 1
        END IF
        END IF
-
-
-
 
     END DO
    END DO
