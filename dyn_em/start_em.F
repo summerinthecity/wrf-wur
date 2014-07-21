@@ -778,6 +778,7 @@
                       grid%XSAIXY,                                                              &   ! Optional Noah-MP
                       grid%T2MVXY, grid%T2MBXY, grid%CHSTARXY,                                  &   ! Optional Noah-MP
                       grid%DZR, grid%DZB, grid%DZG,                          & !Optional urban
+                      grid%TC2M_URB2D,                                       & !Optional urban JJA
                       grid%TR_URB2D,grid%TB_URB2D,grid%TG_URB2D,grid%TC_URB2D,    & !Optional urban
                       grid%QC_URB2D, grid%XXXR_URB2D,grid%XXXB_URB2D,        & !Optional urban
                       grid%XXXG_URB2D, grid%XXXC_URB2D,                 & !Optional urban

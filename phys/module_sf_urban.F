@@ -269,6 +269,7 @@ MODULE module_sf_urban
                     UTYPE,TA,QA,UA,U1,V1,SSG,SSGD,SSGQ,LLG,RAIN,RHOO, & ! I
                     ZA,DECLIN,COSZ,OMG,XLAT,DELT,ZNT,                 & ! I
                     CHS, CHS2,                                        & ! I
+                    TC2M,                                             & ! JJA
                     TR, TB, TG, TC, QC, UC,                           & ! H
                     TRL,TBL,TGL,                                      & ! H
                     XXXR, XXXB, XXXG, XXXC,                           & ! H
@@ -400,7 +401,7 @@ MODULE module_sf_urban
 ! XXXC: Monin-Obkhov length for urban-canopy  [dimensionless]
 !
 ! TRL, TBL, TGL: layer temperature [K] (absolute temperature)
-
+   REAL, INTENT(INOUT):: TC2M
    REAL, INTENT(INOUT):: TR, TB, TG, TC, QC, UC
    REAL, INTENT(INOUT):: XXXR, XXXB, XXXG, XXXC
 
@@ -1221,6 +1222,10 @@ MODULE module_sf_urban
    Q2 = QS + (QA-QS)*(PSIT2/PSIT)    ! humidity at 2 m       [-]
 
 !   TS = (LW/SIG_SI/0.88)**0.25       ! Radiative temperature [K]
+
+! JJA alternative formula for 2meter temperature in the canyon
+! FIXME
+   TC2M = TS + 10.0 
 
    END SUBROUTINE urban
 !===============================================================================

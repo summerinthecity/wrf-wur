@@ -708,6 +708,7 @@ state    real  dfi_SMFR3D      ilj   misc        1         Z     r    "SMFR3D_df
 state    real  dfi_KEEPFR3DFLAG ilj  misc        1         Z     r    "KEEPFR3DFLAG_dfi"     "FLAG - 1. FROZEN SOIL YES, 0 - NO"             ""
 
 # urban state variables
+state    real   TC2M_URB2D       ij     misc        1         -     h      "TC2M_URB"            "URBAN CANOPY 2M TEMPERATURE"        "K"
 state    real   TR_URB2D         ij     misc        1         -     rh     "TR_URB"              "URBAN ROOF SKIN TEMPERATURE"        "K"
 state    real   TB_URB2D         ij     misc        1         -     rh     "TB_URB"              "URBAN WALL SKIN TEMPERATURE"        "K" 
 state    real   TG_URB2D         ij     misc        1         -     rh     "TG_URB"              "URBAN ROAD SKIN TEMPERATURE"        "K" 
