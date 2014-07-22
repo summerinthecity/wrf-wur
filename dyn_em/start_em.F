@@ -876,7 +876,7 @@
        ! JJA Initialize multilayered urban fields from aux input
        CALL nl_get_sf_urban_init_from_file( 1, sf_urban_init_from_file)
 
-       IF( sf_urban_init_from_file .EQ. .TRUE.)
+       IF( sf_urban_init_from_file ) THEN
            grid%trl_urb3d=grid%trl_urb3d_in
            grid%tbl_urb3d=grid%tbl_urb3d_in
            grid%tgl_urb3d=grid%tgl_urb3d_in

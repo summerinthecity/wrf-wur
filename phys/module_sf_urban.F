@@ -2329,7 +2329,7 @@ MODULE module_sf_urban
       TS_URB2D(I,J)=TSURFACE0_URB(I,J)+0.
 
 ! JJA
-      IF( sf_urban_init_from_file .EQ. .FALSE.)
+      IF(.not. sf_urban_init_from_file ) THEN
         TRL_URB3D(I,1,J)=TLAYER0_URB(I,1,J)+0.
         TRL_URB3D(I,2,J)=0.5*(TLAYER0_URB(I,1,J)+TLAYER0_URB(I,2,J))
         TRL_URB3D(I,3,J)=TLAYER0_URB(I,2,J)+0.
@@ -2344,8 +2344,8 @@ MODULE module_sf_urban
           TGL_URB3D(I,K,J)=TLAYER0_URB(I,K,J)+0.
         END DO
 
-        WRITE ( message , * ) "urban_var_init: TRL, TBL, and TGL re-initialized from boundaries"
-        CALL wrf_message(trim(message)) 
+        WRITE ( mesg , * ) "urban_var_init: TRL, TBL, and TGL re-initialized from boundaries"
+        CALL wrf_message(trim(mesg)) 
       ENDIF
 ! JJA
       
