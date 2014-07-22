@@ -2146,6 +2146,12 @@ MODULE module_sf_urban
 
    INTEGER :: I,J,K,CHECK
 
+! JJA
+   LOGICAL :: sf_urban_init_from_file 
+
+   CALL nl_get_sf_urban_init_from_file( 1, sf_urban_init_from_file )
+! JJA
+
    CHECK = 0
 
    DO I=ims,ime
@@ -2322,37 +2328,26 @@ MODULE module_sf_urban
 !
       TS_URB2D(I,J)=TSURFACE0_URB(I,J)+0.
 
-!      DO K=1,num_roof_layers
-!     DO K=1,num_soil_layers
-!         TRL_URB3D(I,1,J)=TLAYER0_URB(I,1,J)+0.
-!         TRL_URB3D(I,2,J)=TLAYER0_URB(I,2,J)+0.
-!         TRL_URB3D(I,3,J)=TLAYER0_URB(I,3,J)+0.
-!         TRL_URB3D(I,4,J)=TLAYER0_URB(I,4,J)+0.
-
-          TRL_URB3D(I,1,J)=TLAYER0_URB(I,1,J)+0.
-          TRL_URB3D(I,2,J)=0.5*(TLAYER0_URB(I,1,J)+TLAYER0_URB(I,2,J))
-          TRL_URB3D(I,3,J)=TLAYER0_URB(I,2,J)+0.
-          TRL_URB3D(I,4,J)=TLAYER0_URB(I,2,J)+(TLAYER0_URB(I,3,J)-TLAYER0_URB(I,2,J))*0.29
-!     END DO
-
-!      DO K=1,num_wall_layers
-!      DO K=1,num_soil_layers
-!m        TBL_URB3D(I,1,J)=TLAYER0_URB(I,1,J)+0.
-!m        TBL_URB3D(I,2,J)=TLAYER0_URB(I,2,J)+0.
-!m        TBL_URB3D(I,3,J)=TLAYER0_URB(I,3,J)+0.
-!m        TBL_URB3D(I,4,J)=TLAYER0_URB(I,4,J)+0.
+! JJA
+      IF( sf_urban_init_from_file .EQ. .FALSE.)
+        TRL_URB3D(I,1,J)=TLAYER0_URB(I,1,J)+0.
+        TRL_URB3D(I,2,J)=0.5*(TLAYER0_URB(I,1,J)+TLAYER0_URB(I,2,J))
+        TRL_URB3D(I,3,J)=TLAYER0_URB(I,2,J)+0.
+        TRL_URB3D(I,4,J)=TLAYER0_URB(I,2,J)+(TLAYER0_URB(I,3,J)-TLAYER0_URB(I,2,J))*0.29
 
         TBL_URB3D(I,1,J)=TLAYER0_URB(I,1,J)+0.
         TBL_URB3D(I,2,J)=0.5*(TLAYER0_URB(I,1,J)+TLAYER0_URB(I,2,J))
         TBL_URB3D(I,3,J)=TLAYER0_URB(I,2,J)+0.
         TBL_URB3D(I,4,J)=TLAYER0_URB(I,2,J)+(TLAYER0_URB(I,3,J)-TLAYER0_URB(I,2,J))*0.29
 
-!      END DO
+        DO K=1,num_soil_layers
+          TGL_URB3D(I,K,J)=TLAYER0_URB(I,K,J)+0.
+        END DO
 
-!      DO K=1,num_road_layers
-      DO K=1,num_soil_layers
-        TGL_URB3D(I,K,J)=TLAYER0_URB(I,K,J)+0.
-      END DO
+        WRITE ( message , * ) "urban_var_init: TRL, TBL, and TGL re-initialized from boundaries"
+        CALL wrf_message(trim(message)) 
+      ENDIF
+! JJA
       
 ! multi-layer urban
 !      IF( sf_urban_physics .EQ. 2)THEN

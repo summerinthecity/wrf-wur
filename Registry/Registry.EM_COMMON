@@ -708,7 +708,11 @@ state    real  dfi_SMFR3D      ilj   misc        1         Z     r    "SMFR3D_df
 state    real  dfi_KEEPFR3DFLAG ilj  misc        1         Z     r    "KEEPFR3DFLAG_dfi"     "FLAG - 1. FROZEN SOIL YES, 0 - NO"             ""
 
 # urban state variables
+state    real   TRL_URB3D_IN       ilj    misc        1         Z     i4d=(interp_fcnm)u=(copy_fcnm)      "TRL_URB_IN" "INPUT ROOF LAYER TEMPERATURE"          "K"
+state    real   TBL_URB3D_IN       ilj    misc        1         Z     i4d=(interp_fcnm)u=(copy_fcnm)      "TBL_URB_IN" "INPUT WALL LAYER TEMPERATURE"          "K"
+state    real   TGL_URB3D_IN       ilj    misc        1         Z     i4d=(interp_fcnm)u=(copy_fcnm)      "TGL_URB_IN" "INPUT ROAD LAYER TEMPERATURE"          "K"
 state    real   TC2M_URB2D       ij     misc        1         -     h      "TC2M_URB"            "URBAN CANOPY 2M TEMPERATURE"        "K"
+state    real   UTCI_URB2D       ij     misc        1         -     h      "UTCI_URB"            "URBAN CANOPY 2M TEMPERATURE"        "K"
 state    real   TR_URB2D         ij     misc        1         -     rh     "TR_URB"              "URBAN ROOF SKIN TEMPERATURE"        "K"
 state    real   TB_URB2D         ij     misc        1         -     rh     "TB_URB"              "URBAN WALL SKIN TEMPERATURE"        "K" 
 state    real   TG_URB2D         ij     misc        1         -     rh     "TG_URB"              "URBAN ROAD SKIN TEMPERATURE"        "K" 
@@ -1816,6 +1820,7 @@ rconfig   logical     bl_mynn_tkeadvect   namelist,physics      max_domains    .
 rconfig   integer     bl_mynn_cloudpdf    namelist,physics      1              0       irh       "bl_mynn_cloudpdf"              ""      ""
 rconfig   integer     mfshconv            namelist,physics      max_domains    1       rh       "mfshconv"         "To activate mass flux scheme with qnse, 1=true or 0=false"      ""
 rconfig   integer     sf_urban_physics    namelist,physics      max_domains    0       rh       "sf_urban_physics"     "activate urban model  0=no, 1=Noah_UCM 2=BEP_UCM"   ""
+rconfig   logical     sf_urban_init_from_file   namelist,physics      1              .false. rh       "sf_urban_init_from_file"     "Reinitialize urban fields TRL TBL TGL from auxiliary input"    ""
 rconfig   real    BLDT                    namelist,physics      max_domains    0       h    "BLDT"          ""      ""
 rconfig   integer cu_physics              namelist,physics      max_domains    0       rh   "cu_physics"    ""      ""
 rconfig   integer shcu_physics            namelist,physics      max_domains    0       rh   "shcu_physics"  ""      ""
