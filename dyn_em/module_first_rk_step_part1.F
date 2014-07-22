@@ -519,6 +519,7 @@ BENCH_START(surf_driver_tim)
      &        ,NUM_ROAD_LAYERS=num_road_layers                            &
      &        ,DZR=grid%dzr ,DZB=grid%dzb ,DZG=grid%dzg                   & !I urban
      &        ,TC2M_URB2D=grid%tc2m_urb2d                                 & !JJA urban
+     &        ,UTCI_URB2D=grid%utci_urb2d                                 & !JJA urban
      &        ,TR_URB2D=grid%tr_urb2d ,TB_URB2D=grid%tb_urb2d             &
      &        ,TG_URB2D=grid%tg_urb2d                                     & !H urban
      &        ,TC_URB2D=grid%tc_urb2d ,QC_URB2D=grid%qc_urb2d             & !H urban

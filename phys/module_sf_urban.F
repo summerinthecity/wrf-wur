@@ -232,6 +232,9 @@ MODULE module_sf_urban
 !  height_bin [ m ]         : Building height bins defined for a particular urban category.
 !  hpercent_bin [ % ]       : Percentage of a particular urban category populated by buildings of particular height bins
 !end BEP
+! JJA
+!  Tmrt [ K ]               : Mean radiative temperature for a human in the canyon
+! end JJA
 ! Moved from URBPARM.TBL
 !
 !  BETR [-]            : minimum moisture availability of roof
@@ -270,6 +273,7 @@ MODULE module_sf_urban
                     ZA,DECLIN,COSZ,OMG,XLAT,DELT,ZNT,                 & ! I
                     CHS, CHS2,                                        & ! I
                     TC2M,                                             & ! JJA
+                    UTCI,                                             & ! JJA
                     TR, TB, TG, TC, QC, UC,                           & ! H
                     TRL,TBL,TGL,                                      & ! H
                     XXXR, XXXB, XXXG, XXXC,                           & ! H
@@ -402,6 +406,7 @@ MODULE module_sf_urban
 !
 ! TRL, TBL, TGL: layer temperature [K] (absolute temperature)
    REAL, INTENT(INOUT):: TC2M
+   REAL, INTENT(INOUT):: UTCI
    REAL, INTENT(INOUT):: TR, TB, TG, TC, QC, UC
    REAL, INTENT(INOUT):: XXXR, XXXB, XXXG, XXXC
 
@@ -491,6 +496,8 @@ MODULE module_sf_urban
    REAL :: WDR,HGT2,HNORM,DHGT
    REAL, parameter :: VonK = 0.4
    REAL :: lambda_f,alpha_macd,beta_macd,lambda_fr
+
+   REAL :: Tmrt ! JJA Mean radiative temperature for a human in the canyon 
 
    INTEGER :: iteration, K, NUDAPT 
    INTEGER :: tloc
@@ -1225,7 +1232,10 @@ MODULE module_sf_urban
 
 ! JJA alternative formula for 2meter temperature in the canyon
 ! FIXME
-   TC2M = TS + 10.0 
+   TC2M = TC
+
+! JJA UTCI calculation
+   CALL UTCI_APPROX(TC2M, QC, tmrt, SQRT(U10**2 + V10**2),UTCI)
 
    END SUBROUTINE urban
 !===============================================================================
@@ -2734,6 +2744,271 @@ SUBROUTINE SFCDIF_URB (ZLM,Z0,THZ0,THLM,SFCSPD,AKANDA,AKMS,AKHS,RLMO,CD)
       CD = USTAR*USTAR/SFCSPD**2
 ! ----------------------------------------------------------------------
   END SUBROUTINE SFCDIF_URB
+! ----------------------------------------------------------------------
+!===========================================================================
+! ----------------------------------------------------------------------
+  SUBROUTINE UTCI_APPROX(TK,QC,Tmrt,va,UTCI)
+! ----------------------------------------------------------------------
+!   UTCI, Version a 0.002, October 2009
+!   Copyright (C) 2009  Peter Broede
+    
+!   UTCI in degree Celsius
+!   computed by a 6th order approximating polynomial from the 4 input paramters 
+!   
+!   Input:
+!     TK       [K]    air temperature
+!     QC       [-]    relative humidity
+!     Tmrt     [K]    mean radiant temperature
+!     va       [m/s]  wind speed 10 m above ground level in m/s
+!  
+!   Output:
+!     UTCI     [C]
+!   
+
+      IMPLICIT NONE
+
+      REAL,INTENT(IN)  :: TK,QC,Tmrt,va
+      REAL,INTENT(OUT) :: utci
+
+      INTEGER :: I
+
+      REAL :: Pa       ! [kPa]  water vapour pressure 
+      REAL :: D_Tmrt   ! [K]    difference between air temperature and mean radiative temperature
+      REAL :: Ta       ! [C]    air temperature
+      REAL :: ES       ! [Pa]   satuarion vapour pressure
+      REAL :: g(0:7)=(/ -2.8365744E3,-6.028076559E3,1.954263612E1,-2.737830188E-2,1.6261698E-5,7.0229056E-10,-1.8680009E-13,2.7150305 /)
+
+!  Calculate saturation vapour pressure over water in hPa for input air temperature (ta) in celsius according to:
+!  Hardy, R.; ITS-90 Formulations for Vapor Pressure, Frostpoint Temperature, Dewpoint Temperature and Enhancement
+!  Factors in the Range -100 to 100 °C; 
+!  Proceedings of Third International Symposium on Humidity and Moisture; edited by National Physical Laboratory (NPL),
+!  London, 1998, pp. 214-221
+!  http://www.thunderscientific.com/tech_info/reflibrary/its90formulas.pdf (retrieved 2008-10-01)
+      
+      ES=g(7)*log(TK)
+      DO I=0,6
+        ES=ES+G(i)*TK**(I-2)  
+      END DO
+      ES=EXP(ES)
+      PA = ES * 0.01 * QC * 0.01 / 10.0
+
+      Ta=TK-273.15
+      D_Tmrt=Tmrt-TK
+
+      !~ calculate 6th order polynomial as approximation     
+      UTCI=Ta+&
+      (  6.07562052D-01 )   + &
+      ( -2.27712343D-02 ) * Ta + &
+      (  8.06470249D-04 ) * Ta*Ta + &
+      ( -1.54271372D-04 ) * Ta*Ta*Ta + &
+      ( -3.24651735D-06 ) * Ta*Ta*Ta*Ta + &
+      (  7.32602852D-08 ) * Ta*Ta*Ta*Ta*Ta + &
+      (  1.35959073D-09 ) * Ta*Ta*Ta*Ta*Ta*Ta + &
+      ( -2.25836520D+00 ) * va + &
+      (  8.80326035D-02 ) * Ta*va + &
+      (  2.16844454D-03 ) * Ta*Ta*va + &
+      ( -1.53347087D-05 ) * Ta*Ta*Ta*va + &
+      ( -5.72983704D-07 ) * Ta*Ta*Ta*Ta*va + &
+      ( -2.55090145D-09 ) * Ta*Ta*Ta*Ta*Ta*va + &
+      ( -7.51269505D-01 ) * va*va + &
+      ( -4.08350271D-03 ) * Ta*va*va + &
+      ( -5.21670675D-05 ) * Ta*Ta*va*va + &
+      (  1.94544667D-06 ) * Ta*Ta*Ta*va*va + &
+      (  1.14099531D-08 ) * Ta*Ta*Ta*Ta*va*va + &
+      (  1.58137256D-01 ) * va*va*va + &
+      ( -6.57263143D-05 ) * Ta*va*va*va + &
+      (  2.22697524D-07 ) * Ta*Ta*va*va*va + &
+      ( -4.16117031D-08 ) * Ta*Ta*Ta*va*va*va + &
+      ( -1.27762753D-02 ) * va*va*va*va + &
+      (  9.66891875D-06 ) * Ta*va*va*va*va + &
+      (  2.52785852D-09 ) * Ta*Ta*va*va*va*va + &
+      (  4.56306672D-04 ) * va*va*va*va*va + &
+      ( -1.74202546D-07 ) * Ta*va*va*va*va*va + &
+      ( -5.91491269D-06 ) * va*va*va*va*va*va + &
+      (  3.98374029D-01 ) * D_Tmrt + &
+      (  1.83945314D-04 ) * Ta*D_Tmrt + &
+      ( -1.73754510D-04 ) * Ta*Ta*D_Tmrt + &
+      ( -7.60781159D-07 ) * Ta*Ta*Ta*D_Tmrt + &
+      (  3.77830287D-08 ) * Ta*Ta*Ta*Ta*D_Tmrt + &
+      (  5.43079673D-10 ) * Ta*Ta*Ta*Ta*Ta*D_Tmrt + &
+      ( -2.00518269D-02 ) * va*D_Tmrt + &
+      (  8.92859837D-04 ) * Ta*va*D_Tmrt + &
+      (  3.45433048D-06 ) * Ta*Ta*va*D_Tmrt + &
+      ( -3.77925774D-07 ) * Ta*Ta*Ta*va*D_Tmrt + &
+      ( -1.69699377D-09 ) * Ta*Ta*Ta*Ta*va*D_Tmrt + &
+      (  1.69992415D-04 ) * va*va*D_Tmrt + &
+      ( -4.99204314D-05 ) * Ta*va*va*D_Tmrt + &
+      (  2.47417178D-07 ) * Ta*Ta*va*va*D_Tmrt + &
+      (  1.07596466D-08 ) * Ta*Ta*Ta*va*va*D_Tmrt + &
+      (  8.49242932D-05 ) * va*va*va*D_Tmrt + &
+      (  1.35191328D-06 ) * Ta*va*va*va*D_Tmrt + &
+      ( -6.21531254D-09 ) * Ta*Ta*va*va*va*D_Tmrt + &
+      ( -4.99410301D-06 ) * va*va*va*va*D_Tmrt + &
+      ( -1.89489258D-08 ) * Ta*va*va*va*va*D_Tmrt + &
+      (  8.15300114D-08 ) * va*va*va*va*va*D_Tmrt + &
+      (  7.55043090D-04 ) * D_Tmrt*D_Tmrt + &
+      ( -5.65095215D-05 ) * Ta*D_Tmrt*D_Tmrt + &
+      ( -4.52166564D-07 ) * Ta*Ta*D_Tmrt*D_Tmrt + &
+      (  2.46688878D-08 ) * Ta*Ta*Ta*D_Tmrt*D_Tmrt + &
+      (  2.42674348D-10 ) * Ta*Ta*Ta*Ta*D_Tmrt*D_Tmrt + &
+      (  1.54547250D-04 ) * va*D_Tmrt*D_Tmrt + &
+      (  5.24110970D-06 ) * Ta*va*D_Tmrt*D_Tmrt + &
+      ( -8.75874982D-08 ) * Ta*Ta*va*D_Tmrt*D_Tmrt + &
+      ( -1.50743064D-09 ) * Ta*Ta*Ta*va*D_Tmrt*D_Tmrt + &
+      ( -1.56236307D-05 ) * va*va*D_Tmrt*D_Tmrt + &
+      ( -1.33895614D-07 ) * Ta*va*va*D_Tmrt*D_Tmrt + &
+      (  2.49709824D-09 ) * Ta*Ta*va*va*D_Tmrt*D_Tmrt + &
+      (  6.51711721D-07 ) * va*va*va*D_Tmrt*D_Tmrt + &
+      (  1.94960053D-09 ) * Ta*va*va*va*D_Tmrt*D_Tmrt + &
+      ( -1.00361113D-08 ) * va*va*va*va*D_Tmrt*D_Tmrt + &
+      ( -1.21206673D-05 ) * D_Tmrt*D_Tmrt*D_Tmrt + &
+      ( -2.18203660D-07 ) * Ta*D_Tmrt*D_Tmrt*D_Tmrt + &
+      (  7.51269482D-09 ) * Ta*Ta*D_Tmrt*D_Tmrt*D_Tmrt + &
+      (  9.79063848D-11 ) * Ta*Ta*Ta*D_Tmrt*D_Tmrt*D_Tmrt + &
+      (  1.25006734D-06 ) * va*D_Tmrt*D_Tmrt*D_Tmrt + &
+      ( -1.81584736D-09 ) * Ta*va*D_Tmrt*D_Tmrt*D_Tmrt + &
+      ( -3.52197671D-10 ) * Ta*Ta*va*D_Tmrt*D_Tmrt*D_Tmrt + &
+      ( -3.36514630D-08 ) * va*va*D_Tmrt*D_Tmrt*D_Tmrt + &
+      (  1.35908359D-10 ) * Ta*va*va*D_Tmrt*D_Tmrt*D_Tmrt + &
+      (  4.17032620D-10 ) * va*va*va*D_Tmrt*D_Tmrt*D_Tmrt + &
+      ( -1.30369025D-09 ) * D_Tmrt*D_Tmrt*D_Tmrt*D_Tmrt + &
+      (  4.13908461D-10 ) * Ta*D_Tmrt*D_Tmrt*D_Tmrt*D_Tmrt + &
+      (  9.22652254D-12 ) * Ta*Ta*D_Tmrt*D_Tmrt*D_Tmrt*D_Tmrt + &
+      ( -5.08220384D-09 ) * va*D_Tmrt*D_Tmrt*D_Tmrt*D_Tmrt + &
+      ( -2.24730961D-11 ) * Ta*va*D_Tmrt*D_Tmrt*D_Tmrt*D_Tmrt + &
+      (  1.17139133D-10 ) * va*va*D_Tmrt*D_Tmrt*D_Tmrt*D_Tmrt + &
+      (  6.62154879D-10 ) * D_Tmrt*D_Tmrt*D_Tmrt*D_Tmrt*D_Tmrt + &
+      (  4.03863260D-13 ) * Ta*D_Tmrt*D_Tmrt*D_Tmrt*D_Tmrt*D_Tmrt + &
+      (  1.95087203D-12 ) * va*D_Tmrt*D_Tmrt*D_Tmrt*D_Tmrt*D_Tmrt + &
+      ( -4.73602469D-12 ) * D_Tmrt*D_Tmrt*D_Tmrt*D_Tmrt*D_Tmrt*D_Tmrt + &
+      (  5.12733497D+00 ) * Pa + &
+      ( -3.12788561D-01 ) * Ta*Pa + &
+      ( -1.96701861D-02 ) * Ta*Ta*Pa + &
+      (  9.99690870D-04 ) * Ta*Ta*Ta*Pa + &
+      (  9.51738512D-06 ) * Ta*Ta*Ta*Ta*Pa + &
+      ( -4.66426341D-07 ) * Ta*Ta*Ta*Ta*Ta*Pa + &
+      (  5.48050612D-01 ) * va*Pa + &
+      ( -3.30552823D-03 ) * Ta*va*Pa + &
+      ( -1.64119440D-03 ) * Ta*Ta*va*Pa + &
+      ( -5.16670694D-06 ) * Ta*Ta*Ta*va*Pa + &
+      (  9.52692432D-07 ) * Ta*Ta*Ta*Ta*va*Pa + &
+      ( -4.29223622D-02 ) * va*va*Pa + &
+      (  5.00845667D-03 ) * Ta*va*va*Pa + &
+      (  1.00601257D-06 ) * Ta*Ta*va*va*Pa + &
+      ( -1.81748644D-06 ) * Ta*Ta*Ta*va*va*Pa + &
+      ( -1.25813502D-03 ) * va*va*va*Pa + &
+      ( -1.79330391D-04 ) * Ta*va*va*va*Pa + &
+      (  2.34994441D-06 ) * Ta*Ta*va*va*va*Pa + &
+      (  1.29735808D-04 ) * va*va*va*va*Pa + &
+      (  1.29064870D-06 ) * Ta*va*va*va*va*Pa + &
+      ( -2.28558686D-06 ) * va*va*va*va*va*Pa + &
+      ( -3.69476348D-02 ) * D_Tmrt*Pa + &
+      (  1.62325322D-03 ) * Ta*D_Tmrt*Pa + &
+      ( -3.14279680D-05 ) * Ta*Ta*D_Tmrt*Pa + &
+      (  2.59835559D-06 ) * Ta*Ta*Ta*D_Tmrt*Pa + &
+      ( -4.77136523D-08 ) * Ta*Ta*Ta*Ta*D_Tmrt*Pa + &
+      (  8.64203390D-03 ) * va*D_Tmrt*Pa + &
+      ( -6.87405181D-04 ) * Ta*va*D_Tmrt*Pa + &
+      ( -9.13863872D-06 ) * Ta*Ta*va*D_Tmrt*Pa + &
+      (  5.15916806D-07 ) * Ta*Ta*Ta*va*D_Tmrt*Pa + &
+      ( -3.59217476D-05 ) * va*va*D_Tmrt*Pa + &
+      (  3.28696511D-05 ) * Ta*va*va*D_Tmrt*Pa + &
+      ( -7.10542454D-07 ) * Ta*Ta*va*va*D_Tmrt*Pa + &
+      ( -1.24382300D-05 ) * va*va*va*D_Tmrt*Pa + &
+      ( -7.38584400D-09 ) * Ta*va*va*va*D_Tmrt*Pa + &
+      (  2.20609296D-07 ) * va*va*va*va*D_Tmrt*Pa + &
+      ( -7.32469180D-04 ) * D_Tmrt*D_Tmrt*Pa + &
+      ( -1.87381964D-05 ) * Ta*D_Tmrt*D_Tmrt*Pa + &
+      (  4.80925239D-06 ) * Ta*Ta*D_Tmrt*D_Tmrt*Pa + &
+      ( -8.75492040D-08 ) * Ta*Ta*Ta*D_Tmrt*D_Tmrt*Pa + &
+      (  2.77862930D-05 ) * va*D_Tmrt*D_Tmrt*Pa + &
+      ( -5.06004592D-06 ) * Ta*va*D_Tmrt*D_Tmrt*Pa + &
+      (  1.14325367D-07 ) * Ta*Ta*va*D_Tmrt*D_Tmrt*Pa + &
+      (  2.53016723D-06 ) * va*va*D_Tmrt*D_Tmrt*Pa + &
+      ( -1.72857035D-08 ) * Ta*va*va*D_Tmrt*D_Tmrt*Pa + &
+      ( -3.95079398D-08 ) * va*va*va*D_Tmrt*D_Tmrt*Pa + &
+      ( -3.59413173D-07 ) * D_Tmrt*D_Tmrt*D_Tmrt*Pa + &
+      (  7.04388046D-07 ) * Ta*D_Tmrt*D_Tmrt*D_Tmrt*Pa + &
+      ( -1.89309167D-08 ) * Ta*Ta*D_Tmrt*D_Tmrt*D_Tmrt*Pa + &
+      ( -4.79768731D-07 ) * va*D_Tmrt*D_Tmrt*D_Tmrt*Pa + &
+      (  7.96079978D-09 ) * Ta*va*D_Tmrt*D_Tmrt*D_Tmrt*Pa + &
+      (  1.62897058D-09 ) * va*va*D_Tmrt*D_Tmrt*D_Tmrt*Pa + &
+      (  3.94367674D-08 ) * D_Tmrt*D_Tmrt*D_Tmrt*D_Tmrt*Pa + &
+      ( -1.18566247D-09 ) * Ta*D_Tmrt*D_Tmrt*D_Tmrt*D_Tmrt*Pa + &
+      (  3.34678041D-10 ) * va*D_Tmrt*D_Tmrt*D_Tmrt*D_Tmrt*Pa + &
+      ( -1.15606447D-10 ) * D_Tmrt*D_Tmrt*D_Tmrt*D_Tmrt*D_Tmrt*Pa + &
+      ( -2.80626406D+00 ) * Pa*Pa + &
+      (  5.48712484D-01 ) * Ta*Pa*Pa + &
+      ( -3.99428410D-03 ) * Ta*Ta*Pa*Pa + &
+      ( -9.54009191D-04 ) * Ta*Ta*Ta*Pa*Pa + &
+      (  1.93090978D-05 ) * Ta*Ta*Ta*Ta*Pa*Pa + &
+      ( -3.08806365D-01 ) * va*Pa*Pa + &
+      (  1.16952364D-02 ) * Ta*va*Pa*Pa + &
+      (  4.95271903D-04 ) * Ta*Ta*va*Pa*Pa + &
+      ( -1.90710882D-05 ) * Ta*Ta*Ta*va*Pa*Pa + &
+      (  2.10787756D-03 ) * va*va*Pa*Pa + &
+      ( -6.98445738D-04 ) * Ta*va*va*Pa*Pa + &
+      (  2.30109073D-05 ) * Ta*Ta*va*va*Pa*Pa + &
+      (  4.17856590D-04 ) * va*va*va*Pa*Pa + &
+      ( -1.27043871D-05 ) * Ta*va*va*va*Pa*Pa + &
+      ( -3.04620472D-06 ) * va*va*va*va*Pa*Pa + &
+      (  5.14507424D-02 ) * D_Tmrt*Pa*Pa + &
+      ( -4.32510997D-03 ) * Ta*D_Tmrt*Pa*Pa + &
+      (  8.99281156D-05 ) * Ta*Ta*D_Tmrt*Pa*Pa + &
+      ( -7.14663943D-07 ) * Ta*Ta*Ta*D_Tmrt*Pa*Pa + &
+      ( -2.66016305D-04 ) * va*D_Tmrt*Pa*Pa + &
+      (  2.63789586D-04 ) * Ta*va*D_Tmrt*Pa*Pa + &
+      ( -7.01199003D-06 ) * Ta*Ta*va*D_Tmrt*Pa*Pa + &
+      ( -1.06823306D-04 ) * va*va*D_Tmrt*Pa*Pa + &
+      (  3.61341136D-06 ) * Ta*va*va*D_Tmrt*Pa*Pa + &
+      (  2.29748967D-07 ) * va*va*va*D_Tmrt*Pa*Pa + &
+      (  3.04788893D-04 ) * D_Tmrt*D_Tmrt*Pa*Pa + &
+      ( -6.42070836D-05 ) * Ta*D_Tmrt*D_Tmrt*Pa*Pa + &
+      (  1.16257971D-06 ) * Ta*Ta*D_Tmrt*D_Tmrt*Pa*Pa + &
+      (  7.68023384D-06 ) * va*D_Tmrt*D_Tmrt*Pa*Pa + &
+      ( -5.47446896D-07 ) * Ta*va*D_Tmrt*D_Tmrt*Pa*Pa + &
+      ( -3.59937910D-08 ) * va*va*D_Tmrt*D_Tmrt*Pa*Pa + &
+      ( -4.36497725D-06 ) * D_Tmrt*D_Tmrt*D_Tmrt*Pa*Pa + &
+      (  1.68737969D-07 ) * Ta*D_Tmrt*D_Tmrt*D_Tmrt*Pa*Pa + &
+      (  2.67489271D-08 ) * va*D_Tmrt*D_Tmrt*D_Tmrt*Pa*Pa + &
+      (  3.23926897D-09 ) * D_Tmrt*D_Tmrt*D_Tmrt*D_Tmrt*Pa*Pa + &
+      ( -3.53874123D-02 ) * Pa*Pa*Pa + &
+      ( -2.21201190D-01 ) * Ta*Pa*Pa*Pa + &
+      (  1.55126038D-02 ) * Ta*Ta*Pa*Pa*Pa + &
+      ( -2.63917279D-04 ) * Ta*Ta*Ta*Pa*Pa*Pa + &
+      (  4.53433455D-02 ) * va*Pa*Pa*Pa + &
+      ( -4.32943862D-03 ) * Ta*va*Pa*Pa*Pa + &
+      (  1.45389826D-04 ) * Ta*Ta*va*Pa*Pa*Pa + &
+      (  2.17508610D-04 ) * va*va*Pa*Pa*Pa + &
+      ( -6.66724702D-05 ) * Ta*va*va*Pa*Pa*Pa + &
+      (  3.33217140D-05 ) * va*va*va*Pa*Pa*Pa + &
+      ( -2.26921615D-03 ) * D_Tmrt*Pa*Pa*Pa + &
+      (  3.80261982D-04 ) * Ta*D_Tmrt*Pa*Pa*Pa + &
+      ( -5.45314314D-09 ) * Ta*Ta*D_Tmrt*Pa*Pa*Pa + &
+      ( -7.96355448D-04 ) * va*D_Tmrt*Pa*Pa*Pa + &
+      (  2.53458034D-05 ) * Ta*va*D_Tmrt*Pa*Pa*Pa + &
+      ( -6.31223658D-06 ) * va*va*D_Tmrt*Pa*Pa*Pa + &
+      (  3.02122035D-04 ) * D_Tmrt*D_Tmrt*Pa*Pa*Pa + &
+      ( -4.77403547D-06 ) * Ta*D_Tmrt*D_Tmrt*Pa*Pa*Pa + &
+      (  1.73825715D-06 ) * va*D_Tmrt*D_Tmrt*Pa*Pa*Pa + &
+      ( -4.09087898D-07 ) * D_Tmrt*D_Tmrt*D_Tmrt*Pa*Pa*Pa + &
+      (  6.14155345D-01 ) * Pa*Pa*Pa*Pa + &
+      ( -6.16755931D-02 ) * Ta*Pa*Pa*Pa*Pa + &
+      (  1.33374846D-03 ) * Ta*Ta*Pa*Pa*Pa*Pa + &
+      (  3.55375387D-03 ) * va*Pa*Pa*Pa*Pa + &
+      ( -5.13027851D-04 ) * Ta*va*Pa*Pa*Pa*Pa + &
+      (  1.02449757D-04 ) * va*va*Pa*Pa*Pa*Pa + &
+      ( -1.48526421D-03 ) * D_Tmrt*Pa*Pa*Pa*Pa + &
+      ( -4.11469183D-05 ) * Ta*D_Tmrt*Pa*Pa*Pa*Pa + &
+      ( -6.80434415D-06 ) * va*D_Tmrt*Pa*Pa*Pa*Pa + &
+      ( -9.77675906D-06 ) * D_Tmrt*D_Tmrt*Pa*Pa*Pa*Pa + &
+      (  8.82773108D-02 ) * Pa*Pa*Pa*Pa*Pa + &
+      ( -3.01859306D-03 ) * Ta*Pa*Pa*Pa*Pa*Pa + &
+      (  1.04452989D-03 ) * va*Pa*Pa*Pa*Pa*Pa + &
+      (  2.47090539D-04 ) * D_Tmrt*Pa*Pa*Pa*Pa*Pa + &
+      (  1.48348065D-03 ) * Pa*Pa*Pa*Pa*Pa*Pa 
+! ----------------------------------------------------------------------
+   END SUBROUTINE UTCI_APPROX
 ! ----------------------------------------------------------------------
 !===========================================================================
 END MODULE module_sf_urban
