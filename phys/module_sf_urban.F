@@ -1234,6 +1234,22 @@ MODULE module_sf_urban
 ! FIXME
    TC2M = TC
 
+! Cylindrical human approximation, Mean radiative flux:
+!   Sstr = \Sum_{i=1}^{6} ( \alpha_k K_i F_i + \epsilon_p L_i F_i )
+!
+!   \alpha_k   = 0.7                 absorpotion coefficient short wave
+!   \epsilon_p = 0.97                emisivity coefficient == absorpotion cofficient long wave radiation (Kirchhoff's law)
+!   \sigma     = 5.67 10e-8 Wm-2K-4  Stefan Boltzmann constant
+!   F_{north,east,south,west} = 0.22 angular factors between surface and radiation
+!   F_{up,down}               = 0.06 
+!   K_i       shortwave flux Wm-2
+!   L_i       longwave flux  Wm-2
+
+!   TMRT = \4throot { Sstr / (\epsilon_p \sigma ) }  [K]
+!
+! Int. J. Climatol. 27: 1983–1993 (2007) Thorsson et.al.
+    TMRT = TC 
+
 ! JJA UTCI calculation
    CALL UTCI_APPROX(TC2M, QC, tmrt, SQRT(U10**2 + V10**2),UTCI)
 
@@ -2343,9 +2359,6 @@ MODULE module_sf_urban
         DO K=1,num_soil_layers
           TGL_URB3D(I,K,J)=TLAYER0_URB(I,K,J)+0.
         END DO
-
-        WRITE ( mesg , * ) "urban_var_init: TRL, TBL, and TGL re-initialized from boundaries"
-        CALL wrf_message(trim(mesg)) 
       ENDIF
 ! JJA
       
