@@ -873,18 +873,6 @@
                       )
        ENDIF   !tgs
 
-       ! JJA Initialize multilayered urban fields from aux input
-       CALL nl_get_sf_urban_init_from_file( 1, sf_urban_init_from_file)
-
-       IF( sf_urban_init_from_file ) THEN
-           grid%trl_urb3d=grid%trl_urb3d_in
-           grid%tbl_urb3d=grid%tbl_urb3d_in
-           grid%tgl_urb3d=grid%tgl_urb3d_in
-
-           WRITE ( message , * ) "start_em: (urban) TRL, TBL, and TGL initialized from auxiliary input"
-           CALL wrf_message(trim(message)) 
-       ENDIF
-       ! JJA
    ENDDO
 
    CALL wrf_debug ( 100 , 'start_domain_em: After call to phy_init' )
@@ -947,6 +935,19 @@
 #include "CYCLE_TEST.inc"
 #endif
 
+   ! JJA Initialize multilayered urban fields from the (extra) input fields with the nectdf names: TBL_URB_IN, TRL_URB_IN, and TGL_URB_IN
+   !     NOTE: if these fields are not in the wrfinput_d? files, they are zero kelvin at this point of the program,
+   !           and obviously wrong!
+   CALL nl_get_sf_urban_init_from_file( 1, sf_urban_init_from_file)
+   IF( sf_urban_init_from_file ) THEN
+       grid%trl_urb3d=grid%trl_urb3d_in
+       grid%tbl_urb3d=grid%tbl_urb3d_in
+       grid%tgl_urb3d=grid%tgl_urb3d_in
+       CALL wrf_message( "start_em: (urban) TRL, TBL, and TGL initialized from auxiliary input" )
+   ELSE
+       CALL wrf_message( "start_em: (urban) TRL, TBL, and TGL re-initialized from boundaries" )
+   ENDIF
+   ! JJA
 !
 !
 
