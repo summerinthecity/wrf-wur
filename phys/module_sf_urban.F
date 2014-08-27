@@ -299,6 +299,7 @@ MODULE module_sf_urban
    REAL, PARAMETER    :: CPP=1004.5       ! heat capacity of dry air    [J/K/kg]
    REAL, PARAMETER    :: ELL=2.442E+06    ! latent heat of vaporization [J/kg]
    REAL, PARAMETER    :: XKA=2.4E-5
+   REAL, PARAMETER    :: VKMC = 0.4       ! Von Karman Constant  [-]
 
 !-------------------------------------------------------------------------------
 ! C: configuration variables
@@ -405,8 +406,8 @@ MODULE module_sf_urban
 ! XXXC: Monin-Obkhov length for urban-canopy  [dimensionless]
 !
 ! TRL, TBL, TGL: layer temperature [K] (absolute temperature)
-   REAL, INTENT(INOUT):: TC2M
-   REAL, INTENT(INOUT):: UTCI
+   REAL, INTENT(INOUT):: TC2M                          ! 2 meter canyon temperature [K]
+   REAL, INTENT(INOUT):: UTCI                          ! Universal thermal comfort index [-]
    REAL, INTENT(INOUT):: TR, TB, TG, TC, QC, UC
    REAL, INTENT(INOUT):: XXXR, XXXB, XXXG, XXXC
 
@@ -497,7 +498,16 @@ MODULE module_sf_urban
    REAL, parameter :: VonK = 0.4
    REAL :: lambda_f,alpha_macd,beta_macd,lambda_fr
 
-   REAL :: Tmrt ! JJA Mean radiative temperature for a human in the canyon 
+   ! JJA UTCI implementation
+   REAL :: Tmrt   ! Mean radiative temperature for a human in the canyon  [K]
+   REAL :: LL     ! MoniO-Obukhov length
+   REAL :: PPSI   ! ?
+   REAL :: PSIHN  ! ?
+   REAL :: FLXTHC ! ?
+   REAL :: SHC    ! Canyon Sensible heat flux   [W/m/m]
+   REAL :: SSRT   ! radiative flux
+   REAL,parameter :: alphaK_mrt   = 0.7   ! absorpotion coefficient of a human, short wave
+   REAL,parameter :: epsilonP_mrt = 0.97  ! emisivity coefficient of a human == absorpotion cofficient long wave radiation (Kirchhoff's law)
 
    INTEGER :: iteration, K, NUDAPT 
    INTEGER :: tloc
@@ -1123,12 +1133,14 @@ MODULE module_sf_urban
    FLXHUM = ( R*FLXHUMR + W*FLXHUMB + RW*FLXHUMG )
    FLXG =   ( R*G0R + W*G0B + RW*G0G )
    LNET =     R*RR + W*RB + RW*RG
+   FLXTHC  = ( W*FLXTHB  + RW*FLXTHG )
 
 !----------------------------------------------------------------------------
 ! Convert Unit: FLUXES and u* T* q*  --> WRF
 !----------------------------------------------------------------------------
 
    SH    = FLXTH  * RHOO * CPP    ! Sensible heat flux          [W/m/m]
+   SHC   = FLXTHC * RHOO * CPP    ! Canyon Sensible heat flux   [W/m/m]
    LH    = FLXHUM * RHOO * ELL    ! Latent heat flux            [W/m/m]
    LH_KINEMATIC = FLXHUM * RHOO   ! Latent heat, Kinematic      [kg/m/m/s]
    LW    = LLG - (LNET*697.7*60.) ! Upward longwave radiation   [W/m/m]
@@ -1230,28 +1242,62 @@ MODULE module_sf_urban
 
 !   TS = (LW/SIG_SI/0.88)**0.25       ! Radiative temperature [K]
 
-! JJA alternative formula for 2meter temperature in the canyon
-! FIXME
-   TC2M = TC
+!-------------------------------------------------------
+!  diagnostic thermal comfort: UTCI TC2M
+!-------------------------------------------------------
 
-! Cylindrical human approximation, Mean radiative flux:
-!   Sstr = \Sum_{i=1}^{6} ( \alpha_k K_i F_i + \epsilon_p L_i F_i )
-!
-!   \alpha_k   = 0.7                 absorpotion coefficient short wave
-!   \epsilon_p = 0.97                emisivity coefficient == absorpotion cofficient long wave radiation (Kirchhoff's law)
-!   \sigma     = 5.67 10e-8 Wm-2K-4  Stefan Boltzmann constant
-!   F_{north,east,south,west} = 0.22 angular factors between surface and radiation
-!   F_{up,down}               = 0.06 
-!   K_i       shortwave flux Wm-2
-!   L_i       longwave flux  Wm-2
+   ! JJA alternative formula for 2meter temperature in the canyon
+   !     code received from Nathalie Theeuwes, WUR
 
-!   TMRT = \4throot { Sstr / (\epsilon_p \sigma ) }  [K]
-!
-! Int. J. Climatol. 27: 1983–1993 (2007) Thorsson et.al.
-    TMRT = TC 
+   LL = -(RHOO*CPP*TA*(UST**3))/(VKMC*9.81*SHC)
+   IF ( ((ZA-ZDC)/LL) > 0 ) THEN
+     PSIHN = -5. * ((ZA-ZDC)/LL)
+   ELSE
+     X = (1.-16.*((ZA-ZDC)/LL))**0.25
+     PSIHN = 2.*ALOG((1.+X*X)/2.)
+   END IF
+   PPSI = (LOG(ZA/2.)) - (PSIHN*(ZA/LL))+(PSIHN*(2/LL))
+   TC2M = ((SHC*PPSI)/(RHOO*CPP*VKMC*UST)) + TA
 
-! JJA UTCI calculation
-   CALL UTCI_APPROX(TC2M, QC, tmrt, SQRT(U10**2 + V10**2),UTCI)
+
+   ! Cylindrical human approximation, Mean radiative flux:
+   ! Int. J. Climatol. 27: 1983–1993 (2007) Thorsson et.al.
+   !
+   !   Sstr = \Sum_{i=1}^{6} ( \alpha_k K_i F_i + \epsilon_p L_i F_i )
+   !
+   !   \alpha_k   = 0.7                   absorpotion coefficient short wave
+   !   \epsilon_p = 0.97                  emisivity coefficient == absorpotion cofficient long wave radiation (Kirchhoff's law)
+   !   \sigma     = 5.67 10e-8 [Wm-2K-4]  Stefan Boltzmann constant (called SIG_SI in this module)
+   !   F_{north,east,south,west} = 0.22   angular factors between surface and radiation
+   !   F_{up,down}               = 0.06   angular factors between surface and radiation
+   !   K_i                                shortwave flux [Wm-2]
+   !   L_i                                longwave flux  [Wm-2]
+
+   !   TMRT = \4throot { Sstr / (\epsilon_p \sigma ) }  [K]
+   ! Assume north-south canyon. Fluxes [W/m/m]:
+   !
+   !                                    longwave            shortwave
+   !   east-west   (walls)              RB * 697.7*60.      SB * 697.7*60.
+   !   north-south (air)                (*)                 SG1 (diffuse component)
+   !   top         (air)                LLG                 SSG
+   !   bottom      (ground)             RG * 697.7*60.      SG * 697.7*60.
+   !
+   ! (*) Emissivity of air is low 0.024 [?, same units as URBPARAM.TBL]
+   !     googling gave this page http://www.roymech.co.uk/Related/Thermos/Thermos_HeatTransfer.html
+   Ssrt = 0.
+   Ssrt = Ssrt + alphaK_mrt   * ( 2. * 0.22 * SB * 697.7*60. + &
+                                  2. * 0.22 * SG1 +            &
+                                       0.06 * SSG +            &
+                                       0.06 * SG * 697.7*60. )
+   Ssrt = Ssrt + epsilonP_mrt * ( 2. * 0.22 * RB * 697.7*60. + &
+                                  2. * 0.22 * 0. +             &
+                                       0.06 * LLG +            &
+                                       0.06 * RG * 697.7*60. )
+   WRITE(*,*)'JJA tmrt: ', SB,SG1,SSG,SG,RB,LLG,RG,Ssrt
+   TMRT = sqrt( sqrt( (Ssrt / (epsilonP_mrt * SIG_SI)) ) )
+
+   ! UTCI calculation
+   CALL UTCI_APPROX(TC2M, QC, TMRT, SQRT(U10**2 + V10**2),UTCI)
 
    END SUBROUTINE urban
 !===============================================================================
@@ -2359,6 +2405,7 @@ MODULE module_sf_urban
         DO K=1,num_soil_layers
           TGL_URB3D(I,K,J)=TLAYER0_URB(I,K,J)+0.
         END DO
+
       ENDIF
 ! JJA
       
@@ -2786,6 +2833,7 @@ SUBROUTINE SFCDIF_URB (ZLM,Z0,THZ0,THLM,SFCSPD,AKANDA,AKMS,AKHS,RLMO,CD)
       REAL :: ES       ! [Pa]   satuarion vapour pressure
       REAL :: g(0:7)=(/ -2.8365744E3,-6.028076559E3,1.954263612E1,-2.737830188E-2,1.6261698E-5,7.0229056E-10,-1.8680009E-13,2.7150305 /)
 
+
 !  Calculate saturation vapour pressure over water in hPa for input air temperature (ta) in celsius according to:
 !  Hardy, R.; ITS-90 Formulations for Vapor Pressure, Frostpoint Temperature, Dewpoint Temperature and Enhancement
 !  Factors in the Range -100 to 100 °C; 
@@ -3015,6 +3063,9 @@ SUBROUTINE SFCDIF_URB (ZLM,Z0,THZ0,THLM,SFCSPD,AKANDA,AKMS,AKHS,RLMO,CD)
       (  1.04452989D-03 ) * va*Pa*Pa*Pa*Pa*Pa + &
       (  2.47090539D-04 ) * D_Tmrt*Pa*Pa*Pa*Pa*Pa + &
       (  1.48348065D-03 ) * Pa*Pa*Pa*Pa*Pa*Pa 
+
+    WRITE(*,*)'JJA: ',TK,QC,Tmrt,va,UTCI
+
 ! ----------------------------------------------------------------------
    END SUBROUTINE UTCI_APPROX
 ! ----------------------------------------------------------------------
