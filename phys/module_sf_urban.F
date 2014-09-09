@@ -156,7 +156,7 @@ MODULE module_sf_urban
 !     PSIH  [-]          : Diagnostic similarity stability function for heat
 !
 !     TC  [K]            : Diagnostic canopy air temperature
-!     QC  [-]            : Diagnostic canopy humidity
+!     QC  [kg/kg]        : Diagnostic canopy specific humidity
 !
 !     TH2 [K]            : Diagnostic potential temperature at 2 m
 !     Q2  [-]            : Diagnostic humidity at 2 m
@@ -2811,13 +2811,13 @@ SUBROUTINE SFCDIF_URB (ZLM,Z0,THZ0,THLM,SFCSPD,AKANDA,AKMS,AKHS,RLMO,CD)
 !   computed by a 6th order approximating polynomial from the 4 input paramters 
 !   
 !   Input:
-!     TK       [K]    air temperature
-!     QC       [-]    relative humidity
-!     Tmrt     [K]    mean radiant temperature
-!     va       [m/s]  wind speed 10 m above ground level in m/s
+!     TK       [K]        air temperature
+!     QC       [kg/kg]    specific humidity
+!     Tmrt     [K]        mean radiant temperature
+!     va       [m/s]      wind speed 10 m above ground level in m/s
 !  
 !   Output:
-!     UTCI     [C]
+!     UTCI     [-]
 !   
 
       IMPLICIT NONE
