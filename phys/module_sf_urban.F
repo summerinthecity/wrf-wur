@@ -541,6 +541,10 @@ MODULE module_sf_urban
 ! Start WUR Modification
 !-------------------------------------------------------------------------------
 
+  ! Only re-calculate urban parameters when the urban dataset is present
+  ! otherwise, use default of utype=2 as set in read_param
+  IF(lb_urb .GT. 0 .and. lp_urb .GT. 0 .and. hgt_urb .GT. 0) THEN
+
   ! Calculate normalization height based on BEP formulation
 
   IF(lb_urb .GT. lp_urb)THEN
@@ -636,6 +640,7 @@ MODULE module_sf_urban
   VFGS=1.-2.*VFWS*HGT/RW
   SVF=VFGS
 
+  ENDIF
 !-------------------------------------------------------------------------------
 ! End WUR Modification
 !-------------------------------------------------------------------------------
