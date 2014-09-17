@@ -500,14 +500,21 @@ MODULE module_sf_urban
 
    ! JJA UTCI implementation
    REAL :: Tmrt   ! Mean radiative temperature for a human in the canyon  [K]
-   REAL :: LL     ! MoniO-Obukhov length
-   REAL :: PPSI   ! ?
-   REAL :: PSIHN  ! ?
-   REAL :: FLXTHC ! ?
-   REAL :: SHC    ! Canyon Sensible heat flux   [W/m/m]
-   REAL :: SSRT   ! radiative flux
    REAL,parameter :: alphaK_mrt   = 0.7   ! absorpotion coefficient of a human, short wave
    REAL,parameter :: epsilonP_mrt = 0.97  ! emisivity coefficient of a human == absorpotion cofficient long wave radiation (Kirchhoff's law)
+
+!
+! RJR additional variables for calculating canyon 2m temperature accoding to Theeuwes et al. (2014)
+!
+   REAL :: XXXCZA ! ZA/MOL above the canyon
+   REAL :: XXXC2M ! 2m/MOL above the canyon
+   REAL :: PSIHZA ! stability function above the canyon for ZA 
+   REAL :: PSIH2M ! stability function above the canyon for 2m 
+   REAL :: RAH    ! resistance of turbulent transport between ZA and 2M [s/m],
+
+!
+! end of additional variables
+!
 
    INTEGER :: iteration, K, NUDAPT 
    INTEGER :: tloc
@@ -1138,14 +1145,12 @@ MODULE module_sf_urban
    FLXHUM = ( R*FLXHUMR + W*FLXHUMB + RW*FLXHUMG )
    FLXG =   ( R*G0R + W*G0B + RW*G0G )
    LNET =     R*RR + W*RB + RW*RG
-   FLXTHC  = ( W*FLXTHB  + RW*FLXTHG )
 
 !----------------------------------------------------------------------------
 ! Convert Unit: FLUXES and u* T* q*  --> WRF
 !----------------------------------------------------------------------------
 
    SH    = FLXTH  * RHOO * CPP    ! Sensible heat flux          [W/m/m]
-   SHC   = FLXTHC * RHOO * CPP    ! Canyon Sensible heat flux   [W/m/m]
    LH    = FLXHUM * RHOO * ELL    ! Latent heat flux            [W/m/m]
    LH_KINEMATIC = FLXHUM * RHOO   ! Latent heat, Kinematic      [kg/m/m/s]
    LW    = LLG - (LNET*697.7*60.) ! Upward longwave radiation   [W/m/m]
@@ -1247,22 +1252,41 @@ MODULE module_sf_urban
 
 !   TS = (LW/SIG_SI/0.88)**0.25       ! Radiative temperature [K]
 
-!-------------------------------------------------------
-!  diagnostic thermal comfort: UTCI TC2M
-!-------------------------------------------------------
 
-   ! JJA alternative formula for 2meter temperature in the canyon
-   !     code received from Nathalie Theeuwes, WUR
 
-   LL = -(RHOO*CPP*TA*(UST**3))/(VKMC*9.81*SHC)
-   IF ( ((ZA-ZDC)/LL) > 0 ) THEN
-     PSIHN = -5. * ((ZA-ZDC)/LL)
+!
+! RJR beginning of calculation of 2m temperature in the canyon
+! RJR according to Theeuwes et al. (2014)
+!
+   XXXCZA = ZA*RLMO_URB ! ZA/MOL over the canyon
+   XXXC2M = 2.*RLMO_URB ! 2m/MOL over the canyon
+
+   
+   IF ( XXXCZA >= 1. ) XXXCZA = 1.
+   IF ( XXXCZA<= -5. ) XXXCZA = -5.
+   IF ( XXXC2M >= 1. ) XXXC2M = 1.
+   IF ( XXXC2M<= -5. ) XXXC2M = -5.
+
+   IF ( RLMO_URB > 0 ) THEN
+      PSIHZA = -5. * XXXCZA
+      PSIH2M = -5. * XXXC2M
    ELSE
-     X = (1.-16.*((ZA-ZDC)/LL))**0.25
-     PSIHN = 2.*ALOG((1.+X*X)/2.)
+      X = (1.-16.*XXXCZA)**0.25
+      PSIHZA = 2.*ALOG((1.+X*X)/2.)
+      X = (1.-16.*XXXC2M)**0.25
+      PSIH2M = 2.*ALOG((1.+X*X)/2.)
    END IF
-   PPSI = (LOG(ZA/2.)) - (PSIHN*(ZA/LL))+(PSIHN*(2/LL))
-   TC2M = ((SHC*PPSI)/(RHOO*CPP*VKMC*UST)) + TA
+   
+   RAH = 1./(0.4*SQRT(CDC*UA*UA))*(ALOG(ZA/2.)-PSIHZA+PSIH2M)
+   TC2M = TA + RAH*(W/RW*FLUXTHB+FLUXTHG)
+!
+! RJR end of calculation of 2m temperature in the canyon
+! RJR according to Theeuwes et al. (2014)
+!
+ 
+!-------------------------------------------------------
+!  diagnostic thermal comfort: UTCI
+!-------------------------------------------------------
 
 
    ! Cylindrical human approximation, Mean radiative flux:
