@@ -273,6 +273,7 @@ MODULE module_sf_urban
                     ZA,DECLIN,COSZ,OMG,XLAT,DELT,ZNT,                 & ! I
                     CHS, CHS2,                                        & ! I
                     TC2M,                                             & ! JJA
+                    TP2M,                                             & ! JJA
                     UTCI,                                             & ! JJA
                     TR, TB, TG, TC, QC, UC,                           & ! H
                     TRL,TBL,TGL,                                      & ! H
@@ -407,6 +408,7 @@ MODULE module_sf_urban
 !
 ! TRL, TBL, TGL: layer temperature [K] (absolute temperature)
    REAL, INTENT(INOUT):: TC2M                          ! 2 meter canyon temperature [K]
+   REAL, INTENT(INOUT):: TP2M                          ! 2 meter canyon temperature in park [K]
    REAL, INTENT(INOUT):: UTCI                          ! Universal thermal comfort index [-]
    REAL, INTENT(INOUT):: TR, TB, TG, TC, QC, UC
    REAL, INTENT(INOUT):: XXXR, XXXB, XXXG, XXXC
@@ -1284,6 +1286,7 @@ MODULE module_sf_urban
    
    RAH = 1./(VonK*SQRT(CDC*UA*UA))*(ALOG(ZA/2.)-PSIHZA+PSIH2M)
    TC2M = TA + RAH*(W/RW*FLXTHB+FLXTHG)
+   TP2M = 0 ! FIXME: implement actual formula
  
 !-------------------------------------------------------
 !  diagnostic thermal comfort: UTCI
