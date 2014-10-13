@@ -496,16 +496,14 @@ MODULE module_sf_urban
 
    REAL :: TRP, TBP, TGP, TCP, QCP, TST, QST
 
-   REAL :: WDR,HGT2,HNORM,DHGT
-   REAL, parameter :: VonK = 0.4
-   REAL :: lambda_f,alpha_macd,beta_macd,lambda_fr
-
    ! JJA UTCI implementation
    REAL :: Tmrt   ! Mean radiative temperature for a human in the canyon  [K]
    REAL :: FLXTHC ! ?
    REAL :: SHC    ! Canyon Sensible heat flux   [W/m/m]
    REAL :: SSRT   ! radiative flux
 
+   ! JJA switch for urban config: true=hi-res LP, LB, and HGHT etc. false=the urban categories from URBPARM.TBL
+   LOGICAL sf_urban_use_wur_config
 !
 ! RJR additional variables for calculating canyon 2m temperature accoding to Theeuwes et al. (2014)
 !
@@ -548,109 +546,19 @@ MODULE module_sf_urban
                    AKANDA_URBAN)
 
 ! Glotfelty, 2012/07/05, NUDAPT Modification
-! Attema, 2014/07/24, WUR/NUDAPT Modification
 
 !-------------------------------------------------------------------------------
 ! Start WUR Modification
+! Attema, 2014/07/24
 !-------------------------------------------------------------------------------
 
-  ! Only re-calculate urban parameters when the urban dataset is present
-  ! otherwise, use default of utype=2 as set in read_param
-  IF(lb_urb .GT. 0 .and. lp_urb .GT. 0 .and. hgt_urb .GT. 0) THEN
-
-  ! Calculate normalization height based on BEP formulation
-
-  IF(lb_urb .GT. lp_urb)THEN
-   HNORM = 2. * hgt_urb * frc_urb  / (lb_urb - lp_urb)
-   HNORM = MAX( 0.01, MIN( 100.0, HNORM ) )
-  ELSE
-   ! WRITE(mesg,*) 'Cannot normalize height: lb_urb is smaller than lp_urb. Setting HNORM=10.0'
-   ! CALL wrf_message(mesg)
-   HNORM = 10.0
-  ENDIF
- 
-  ! Assign NUDAPT Parameters
-
-  ZR = MAX( 0.01, MIN(hgt_urb,100.0) )
-  IF(frc_urb .GT. 0)THEN
-   R = MAX( MIN(lp_urb/frc_urb, 0.9), 0.1 )
-  ELSE
-   R = 0.5
-  ENDIF
-  RW = 1.0-R
-  HGT = ZR/HNORM
-
-  SIGMA_ZED = max( 1.0, min( stdh_urb, 10.0 ) )
-
-  ! Calculate Wind Direction and Assign Appropriae lf_urb
-
-  WDR = (45.0/ATAN(1.0))*ATAN2(U10,V10)+180.
- 
-  IF(frc_urb .gt. 0) THEN
-   IF(WDR.ge.0.0.and.WDR.lt.22.5)THEN
-     lambda_f = lf_urb(1)/frc_urb ! 0/180  
-   ELSEIF(WDR.ge.22.5.and.WDR.lt.67.5)THEN
-     lambda_f = lf_urb(2)/frc_urb !45/225
-   ELSEIF(WDR.ge.67.5.and.WDR.lt.112.5)THEN
-     lambda_f = lf_urb(3)/frc_urb !90/270
-   ELSEIF(WDR.ge.112.5.and.WDR.lt.157.5)THEN
-     lambda_f = lf_urb(4)/frc_urb ! 135/315
-   ELSEIF(WDR.ge.157.5.and.WDR.lt.202.5)THEN
-     lambda_f = lf_urb(1)/frc_urb ! 0/180      
-   ELSEIF(WDR.ge.202.5.and.WDR.lt.247.5)THEN
-     lambda_f = lf_urb(2)/frc_urb ! 45/225 
-   ELSEIF(WDR.ge.247.5.and.WDR.lt.292.5)THEN
-     lambda_f = lf_urb(3)/frc_urb !90/270 
-   ELSEIF(WDR.ge.292.5.and.WDR.lt.337.5)THEN
-     lambda_f = lf_urb(4)/frc_urb !135/315) 
-   ELSEIF(WDR.ge.337.5.and.WDR.le.360.)THEN
-     lambda_f = lf_urb(1)/frc_urb !0/180
-   ELSE
-     WRITE(mesg,*) 'Invalid wind direction: 0/180 is selected instead'
-     lambda_f = lf_urb(1)/frc_urb
-   ENDIF
-  ELSE
-     lambda_f = 0.1
+  CALL nl_get_sf_urban_use_wur_config( 1, sf_urban_use_wur_config )
+  IF( sf_urban_use_wur_config ) THEN
+    CALL update_param_wur(lp_urb,frc_urb,lb_urb,hgt_urb,stdh_urb,lf_urb,&
+                          u1,v1,&
+                          ZR,Z0C,Z0HC,ZDC,SVF,R,RW,HGT,Z0R)
   ENDIF
 
-  lambda_f = max( 0.05, min( 0.35, lambda_f ) )
-
-  ! Calculate the following urban canyon geometry parameters following Macdonald's (1998) formulations
-
-  Cd         = 1.2
-  alpha_macd = 4.43
-  beta_macd  = 1.0
-
-  ZDC = ZR * ( 1.0 + ( alpha_macd ** ( -R ) )  * ( R - 1.0 ) )
-
-  Z0C = ZR * ( 1.0 - ZDC/ZR ) * &
-       exp (-(0.5 * beta_macd * Cd / (VonK**2) * ( 1.0-ZDC/ZR) * lambda_f )**(-0.5))
-
-  ! Clamp between 10 cm and 20 m
-  lambda_fr = max( 0.05, min( 0.35, stdh_urb/HNORM ) )
-
-  Z0R = ZR * ( 1.0 - ZDC/ZR) &
-           * exp ( -(0.5 * beta_macd * Cd / (VonK**2) &
-           * ( 1.0-ZDC/ZR) * lambda_fr )**(-0.5))
-
-  Z0HC = 0.1 * Z0C
-
-  ! Calculate Sky View Factor
-
-  ! FIXME: should HGT not be ZR? ie. not normalized?
-
-!
-! RJR analytical formulation for the wall sky view factor
-!
-  VFWS= 0.5*(1.+RW/HGT-sqrt(1.+(RW/HGT)**2.))
-
-  VFGS=1.-2.*VFWS*HGT/RW
-  SVF=VFGS
-
-  VFGS=1.-2.*VFWS*HGT/RW
-  SVF=VFGS
-
-  ENDIF
 !-------------------------------------------------------------------------------
 ! End WUR Modification
 !-------------------------------------------------------------------------------
@@ -1284,7 +1192,7 @@ MODULE module_sf_urban
       PSIH2M = 2.*ALOG((1.+X*X)/2.)
    END IF
    
-   RAH = 1./(VonK*SQRT(CDC*UA*UA))*(ALOG(ZA/2.)-PSIHZA+PSIH2M)
+   RAH = 1./(VKMC*SQRT(CDC*UA*UA))*(ALOG(ZA/2.)-PSIHZA+PSIH2M)
    TC2M = TA + RAH*(W/RW*FLXTHB+FLXTHG)
    TP2M = 0 ! FIXME: implement actual formula
  
@@ -1326,11 +1234,12 @@ MODULE module_sf_urban
                                   2. * 0.22 * 0. +             &
                                        0.06 * LLG +            &
                                        0.06 * RG * 697.7*60. )
-   WRITE(*,*)'JJA tmrt: ', SB,SG1,SSG,SG,RB,LLG,RG,Ssrt
    TMRT = sqrt( sqrt( (Ssrt / (epsilonP_mrt * SIG_SI)) ) )
 
    ! UTCI calculation
    CALL UTCI_APPROX(TC2M, QC, TMRT, SQRT(U10**2 + V10**2),UTCI)
+
+!   WRITE(*,*)'JJA debug: ', R,RW,TMRT,UTCI,TC2M,TP2M
 
    END SUBROUTINE urban
 !===============================================================================
@@ -1579,6 +1488,130 @@ MODULE module_sf_urban
    END SUBROUTINE multi_layer
 !===============================================================================
 !
+!  subroutine update param wur 
+!
+!===============================================================================
+   SUBROUTINE update_param_wur(lp_urb,frc_urb,lb_urb,hgt_urb,stdh_urb,lf_urb,&
+                               u1,v1,&
+                               ZR,Z0C,Z0HC,ZDC,SVF,R,RW,HGT,Z0R)
+
+   IMPLICIT NONE
+!-------------------------------------------------------------------------------
+! I: input Parameters
+!-------------------------------------------------------------------------------
+   REAL, INTENT(IN) :: lp_urb   ! plan area fraction [-]
+   REAL, INTENT(IN) :: frc_urb  ! urban fraction [-]
+   REAL, INTENT(IN) :: lb_urb   ! building surface to plan area ratio [-]
+   REAL, INTENT(IN) :: hgt_urb  ! area weighted mean building height [m] 
+   REAL, INTENT(IN) :: stdh_urb ! standard deviation of building height [m]
+
+   REAL, INTENT(IN), DIMENSION(4) :: lf_urb   ! frontal area index [-]
+
+   REAL, INTENT(IN)    :: U1   ! u at 1st atmospheric level             [m/s]
+   REAL, INTENT(IN)    :: V1   ! v at 1st atmospheric level             [m/s]
+
+!-------------------------------------------------------------------------------
+! O: output variables
+!-------------------------------------------------------------------------------
+   REAL, INTENT(OUT) :: ZR,Z0C,Z0HC,ZDC,SVF,R,RW,HGT,Z0R
+
+!-------------------------------------------------------------------------------
+! C:  Constants
+!-------------------------------------------------------------------------------
+   REAL, PARAMETER :: Cd         = 1.2
+   REAL, PARAMETER :: alpha_macd = 4.43
+   REAL, PARAMETER :: beta_macd  = 1.0
+   REAL, PARAMETER :: VKMC       = 0.4
+
+!-------------------------------------------------------------------------------
+! L:  Local variables
+!-------------------------------------------------------------------------------
+   REAL :: HNORM, WDR
+   REAL :: lambda_f, lambda_fr
+   REAL :: VFWS,VFGS 
+
+
+  ! Calculate normalization height based on BEP formulation
+
+  IF(lb_urb .GT. lp_urb)THEN
+   HNORM = 2. * hgt_urb * frc_urb  / (lb_urb - lp_urb)
+   HNORM = MAX( 0.01, MIN( 100.0, HNORM ) )
+  ELSE
+   ! WRITE(mesg,*) 'Cannot normalize height: lb_urb is smaller than lp_urb. Setting HNORM=10.0'
+   ! CALL wrf_message(mesg)
+   HNORM = 10.0
+  ENDIF
+ 
+  ! Assign NUDAPT Parameters
+
+  ZR = MAX( 0.01, MIN(hgt_urb,100.0) )
+  IF(frc_urb .GT. 0)THEN
+   R = MAX( MIN(lp_urb/frc_urb, 0.9), 0.1 )
+  ELSE
+   R = 0.5
+  ENDIF
+  RW = 1.0-R
+  HGT = ZR/HNORM
+
+  ! Calculate Wind Direction and Assign Appropriate lf_urb
+
+  WDR = (45.0/ATAN(1.0))*ATAN2(U1,V1)+180.
+ 
+  IF(frc_urb .gt. 0) THEN
+   IF(WDR.ge.0.0.and.WDR.lt.22.5)THEN
+     lambda_f = lf_urb(1)/frc_urb ! 0/180  
+   ELSEIF(WDR.ge.22.5.and.WDR.lt.67.5)THEN
+     lambda_f = lf_urb(2)/frc_urb !45/225
+   ELSEIF(WDR.ge.67.5.and.WDR.lt.112.5)THEN
+     lambda_f = lf_urb(3)/frc_urb !90/270
+   ELSEIF(WDR.ge.112.5.and.WDR.lt.157.5)THEN
+     lambda_f = lf_urb(4)/frc_urb ! 135/315
+   ELSEIF(WDR.ge.157.5.and.WDR.lt.202.5)THEN
+     lambda_f = lf_urb(1)/frc_urb ! 0/180      
+   ELSEIF(WDR.ge.202.5.and.WDR.lt.247.5)THEN
+     lambda_f = lf_urb(2)/frc_urb ! 45/225 
+   ELSEIF(WDR.ge.247.5.and.WDR.lt.292.5)THEN
+     lambda_f = lf_urb(3)/frc_urb !90/270 
+   ELSEIF(WDR.ge.292.5.and.WDR.lt.337.5)THEN
+     lambda_f = lf_urb(4)/frc_urb !135/315) 
+   ELSEIF(WDR.ge.337.5.and.WDR.le.360.)THEN
+     lambda_f = lf_urb(1)/frc_urb !0/180
+   ELSE
+     WRITE(mesg,*) 'Invalid wind direction: 0/180 is selected instead'
+     lambda_f = lf_urb(1)/frc_urb
+  ENDIF
+  ELSE
+      lambda_f = 0.1
+  ENDIF
+
+  lambda_f = max( 0.05, min( 0.35, lambda_f ) )
+
+  ! Calculate the following urban canyon geometry parameters following Macdonald's (1998) formulations
+
+  ZDC = ZR * ( 1.0 + ( alpha_macd ** ( -R ) )  * ( R - 1.0 ) )
+
+  Z0C = ZR * ( 1.0 - ZDC/ZR ) * &
+       exp (-(0.5 * beta_macd * Cd / (VKMC**2) * ( 1.0-ZDC/ZR) * lambda_f )**(-0.5))
+
+  ! Clamp between 10 cm and 20 m
+  lambda_fr = max( 0.05, min( 0.35, stdh_urb/HNORM ) )
+
+  Z0R = ZR * ( 1.0 - ZDC/ZR) &
+           * exp ( -(0.5 * beta_macd * Cd / (VKMC**2) &
+           * ( 1.0-ZDC/ZR) * lambda_fr )**(-0.5))
+
+  Z0HC = 0.1 * Z0C
+
+
+  ! Calculate Sky View Factor using analytical formulation
+  VFWS= 0.5*(1.+RW/HGT-sqrt(1.+(RW/HGT)**2.))
+
+  VFGS=1.-2.*VFWS*HGT/RW
+  SVF=VFGS
+
+  END SUBROUTINE update_param_wur
+!===============================================================================
+!
 !  subroutine read_param
 !
 !===============================================================================
@@ -1704,7 +1737,7 @@ MODULE module_sf_urban
    INTEGER :: num_wall_layers
    INTEGER :: num_road_layers
    INTEGER :: dummy 
-   REAL    :: DHGT, HGT, VFWS, VFGS
+   REAL    :: HGT, VFWS, VFGS
 
    REAL, allocatable, dimension(:) :: ROOF_WIDTH
    REAL, allocatable, dimension(:) :: ROAD_WIDTH
@@ -1713,7 +1746,7 @@ MODULE module_sf_urban
    character(len=128) :: name
    integer :: indx
 
-   real, parameter :: VonK = 0.4
+   real, parameter :: VKMC = 0.4
    real :: lambda_p
    real :: lambda_f
    real :: Cd
@@ -2080,14 +2113,14 @@ MODULE module_sf_urban
       ZDC_TBL(LC) = ZR_TBL(LC) * ( 1.0 + ( alpha_macd ** ( -Lambda_P ) )  * ( Lambda_P - 1.0 ) )
 
       Z0C_TBL(LC) = ZR_TBL(LC) * ( 1.0 - ZDC_TBL(LC)/ZR_TBL(LC) ) * &
-           exp (-(0.5 * beta_macd * Cd / (VonK**2) * ( 1.0-ZDC_TBL(LC)/ZR_TBL(LC) ) * Lambda_F )**(-0.5))
+           exp (-(0.5 * beta_macd * Cd / (VKMC**2) * ( 1.0-ZDC_TBL(LC)/ZR_TBL(LC) ) * Lambda_F )**(-0.5))
 
       IF (SF_URBAN_PHYSICS == 1) THEN
          ! Include roof height variability in Macdonald
          ! to parameterize Z0R as a function of ZR_SD (Standard Deviation)
          Lambda_FR  = SIGMA_ZED_TBL(LC) / ( ROAD_WIDTH(LC) + ROOF_WIDTH(LC) )
          Z0R_TBL(LC) = ZR_TBL(LC) * ( 1.0 - ZDC_TBL(LC)/ZR_TBL(LC) ) &
-              * exp ( -(0.5 * beta_macd * Cd / (VonK**2) &
+              * exp ( -(0.5 * beta_macd * Cd / (VKMC**2) &
               * ( 1.0-ZDC_TBL(LC)/ZR_TBL(LC) ) * Lambda_FR )**(-0.5))
       ENDIF
 
