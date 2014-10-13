@@ -500,12 +500,14 @@ MODULE module_sf_urban
 
    ! JJA UTCI implementation
    REAL :: Tmrt   ! Mean radiative temperature for a human in the canyon  [K]
-   REAL,parameter :: alphaK_mrt   = 0.7   ! absorpotion coefficient of a human, short wave
-   REAL,parameter :: epsilonP_mrt = 0.97  ! emisivity coefficient of a human == absorpotion cofficient long wave radiation (Kirchhoff's law)
+   REAL :: FLXTHC ! ?
+   REAL :: SHC    ! Canyon Sensible heat flux   [W/m/m]
+   REAL :: SSRT   ! radiative flux
 
 !
 ! RJR additional variables for calculating canyon 2m temperature accoding to Theeuwes et al. (2014)
 !
+   REAL :: RLMO_CAN ! Monin-Obukhov length over canyon
    REAL :: XXXCZA ! ZA/MOL above the canyon
    REAL :: XXXC2M ! 2m/MOL above the canyon
    REAL :: PSIHZA ! stability function above the canyon for ZA 
@@ -515,6 +517,8 @@ MODULE module_sf_urban
 !
 ! end of additional variables
 !
+   REAL,parameter :: alphaK_mrt   = 0.7   ! absorpotion coefficient of a human, short wave
+   REAL,parameter :: epsilonP_mrt = 0.97  ! emisivity coefficient of a human == absorpotion cofficient long wave radiation (Kirchhoff's law)
 
    INTEGER :: iteration, K, NUDAPT 
    INTEGER :: tloc
@@ -632,17 +636,14 @@ MODULE module_sf_urban
   ! Calculate Sky View Factor
 
   ! FIXME: should HGT not be ZR? ie. not normalized?
-  DHGT=HGT/100.
-  HGT2=0.
-  VFWS=0.
-  HGT2=HGT-DHGT/2.
-  DO NUDAPT=1,99
-   HGT2=HGT2-DHGT
-   VFWS=VFWS+0.25*(1.-HGT2/SQRT(HGT2**2.+RW**2.))
-  END DO
 
-  VFWS=VFWS/99.
-  VFWS=VFWS*2.
+!
+! RJR analytical formulation for the wall sky view factor
+!
+  VFWS= 0.5*(1.+RW/HGT-sqrt(1.+(RW/HGT)**2.))
+
+  VFGS=1.-2.*VFWS*HGT/RW
+  SVF=VFGS
 
   VFGS=1.-2.*VFWS*HGT/RW
   SVF=VFGS
@@ -906,6 +907,7 @@ MODULE module_sf_urban
    T1VC = TCP* (1.0+ 0.61 * QA) 
    RLMO_URB=0.0
    CALL SFCDIF_URB(ZA,Z0C,T1VC,TH2V,UA,AKANDA_URBAN,CMC_URB,CHC_URB,RLMO_URB,CDC)
+   RLMO_CAN = RLMO_URB 
    ALPHAC =  RHO*CP*CHC_URB
 
    IF (CH_SCHEME == 1) THEN 
@@ -1145,12 +1147,14 @@ MODULE module_sf_urban
    FLXHUM = ( R*FLXHUMR + W*FLXHUMB + RW*FLXHUMG )
    FLXG =   ( R*G0R + W*G0B + RW*G0G )
    LNET =     R*RR + W*RB + RW*RG
+   FLXTHC  = ( W*FLXTHB  + RW*FLXTHG) 
 
 !----------------------------------------------------------------------------
 ! Convert Unit: FLUXES and u* T* q*  --> WRF
 !----------------------------------------------------------------------------
 
    SH    = FLXTH  * RHOO * CPP    ! Sensible heat flux          [W/m/m]
+   SHC   = FLXTHC * RHOO * CPP    ! Canyon Sensible heat flux   [W/m/m]
    LH    = FLXHUM * RHOO * ELL    ! Latent heat flux            [W/m/m]
    LH_KINEMATIC = FLXHUM * RHOO   ! Latent heat, Kinematic      [kg/m/m/s]
    LW    = LLG - (LNET*697.7*60.) ! Upward longwave radiation   [W/m/m]
@@ -1243,23 +1247,24 @@ MODULE module_sf_urban
    U10 = U1 * (PSIX10/PSIX)       ! u at 10 m [m/s]
    V10 = V1 * (PSIX10/PSIX)       ! v at 10 m [m/s]
 
-!   TH2 = TS + (TA-TS)*(PSIT2/PSIT)   ! potential temp at 2 m [K]
-!  TH2 = TS + (TA-TS)*(PSIT2/PSIT)   ! Fei: this seems to be temp (not potential) at 2 m [K]
-!Fei: consistant with M-O theory
+!  TH2 = TS + (TA-TS)*(PSIT2/PSIT)    ! potential temp at 2 m [K]
+!  TH2 = TS + (TA-TS)*(PSIT2/PSIT)    ! Fei: this seems to be temp (not potential) at 2 m [K]
+!                                       Fei: consistant with M-O theory
    TH2 = TS + (TA-TS) *(CHS/CHS2) 
 
-   Q2 = QS + (QA-QS)*(PSIT2/PSIT)    ! humidity at 2 m       [-]
+   Q2 = QS + (QA-QS)*(PSIT2/PSIT)     ! humidity at 2 m       [-]
 
 !   TS = (LW/SIG_SI/0.88)**0.25       ! Radiative temperature [K]
 
 
 
-!
-! RJR beginning of calculation of 2m temperature in the canyon
+!-------------------------------------------------------
+! RJR calculation of 2m temperature in the canyon
 ! RJR according to Theeuwes et al. (2014)
-!
-   XXXCZA = ZA*RLMO_URB ! ZA/MOL over the canyon
-   XXXC2M = 2.*RLMO_URB ! 2m/MOL over the canyon
+!-------------------------------------------------------
+
+   XXXCZA = ZA*RLMO_CAN ! ZA/MOL over the canyon
+   XXXC2M = 2.*RLMO_CAN ! 2m/MOL over the canyon
 
    
    IF ( XXXCZA >= 1. ) XXXCZA = 1.
@@ -1277,12 +1282,8 @@ MODULE module_sf_urban
       PSIH2M = 2.*ALOG((1.+X*X)/2.)
    END IF
    
-   RAH = 1./(0.4*SQRT(CDC*UA*UA))*(ALOG(ZA/2.)-PSIHZA+PSIH2M)
-   TC2M = TA + RAH*(W/RW*FLUXTHB+FLUXTHG)
-!
-! RJR end of calculation of 2m temperature in the canyon
-! RJR according to Theeuwes et al. (2014)
-!
+   RAH = 1./(VonK*SQRT(CDC*UA*UA))*(ALOG(ZA/2.)-PSIHZA+PSIH2M)
+   TC2M = TA + RAH*(W/RW*FLXTHB+FLXTHG)
  
 !-------------------------------------------------------
 !  diagnostic thermal comfort: UTCI
@@ -2093,20 +2094,12 @@ MODULE module_sf_urban
 
       Z0HC_TBL(LC) = 0.1 * Z0C_TBL(LC)
 
-      !
-      ! Calculate Sky View Factor:
-      !
-      DHGT=HGT_TBL(LC)/100.
-      HGT=0.
-      VFWS=0.
-      HGT=HGT_TBL(LC)-DHGT/2.
-      do k=1,99
-         HGT=HGT-DHGT
-         VFWS=VFWS+0.25*(1.-HGT/SQRT(HGT**2.+RW_TBL(LC)**2.))
-      end do
+     !
+     ! Calculate Sky View Factor:
+     !
 
-     VFWS=VFWS/99.
-     VFWS=VFWS*2.
+     ! RJR analytical formulation for wall sky view factor
+     VFWS = 0.5*(1.+RW_TBL(LC)/HGT_TBL(LC)-sqrt(1.+(RW_TBL(LC)/HGT_TBL(LC))**2.))
 
      VFGS=1.-2.*VFWS*HGT_TBL(LC)/RW_TBL(LC)
      SVF_TBL(LC)=VFGS
@@ -3093,7 +3086,7 @@ SUBROUTINE SFCDIF_URB (ZLM,Z0,THZ0,THLM,SFCSPD,AKANDA,AKMS,AKHS,RLMO,CD)
       (  2.47090539D-04 ) * D_Tmrt*Pa*Pa*Pa*Pa*Pa + &
       (  1.48348065D-03 ) * Pa*Pa*Pa*Pa*Pa*Pa 
 
-    WRITE(*,*)'JJA: ',TK,QC,Tmrt,va,UTCI
+!   WRITE(*,*)'JJA: ',TK,QC,Tmrt,va,UTCI
 
 ! ----------------------------------------------------------------------
    END SUBROUTINE UTCI_APPROX
