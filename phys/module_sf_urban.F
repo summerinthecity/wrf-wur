@@ -5,6 +5,22 @@ MODULE module_sf_urban
 !     Original Version: 2002/11/06 by Hiroyuki Kusaka
 !     Last Update:      2006/08/24 by Fei Chen and Mukul Tewari (NCAR/RAL)  
 !===============================================================================
+!
+! Urban canyon initialization:
+!    1) Get the urban category from the landuse, use default category 2.
+!       This allows you to specify high- and  low-intensity and commercial areas when more detailed input is unavailable.
+!    2) Read all urban paramters from the URBPARM.TBL
+!    3) If the sf_urban_use_wur_config flag is set, recalculate geometry related canyon properties using extra input fields lp,lp,hgt,stdhgt
+!    4) Check urban faction FRC_URB2D, if it is not a valid number, ie. in [0,1], set it to the default for the urban category.
+!
+! Run time initialization:
+!    Restart:
+!       Use the fields from the restart file
+!    Cold start
+!        If sf_urban_init_from_file is
+!         true:  TRL_URB3D, TBL_URB3D, TGL_URB3D are copied from TRL_URB_IN, TLB_URB_IN, TGL_URB_IN from the wrf_input.d?
+!         false: TRL_URB3D, TLB_URB3D, TGL_URB3D are calculated from surface scheme
+!
 
    CHARACTER(LEN=4)                :: LU_DATA_TYPE
 
@@ -2270,7 +2286,7 @@ MODULE module_sf_urban
    LOGICAL :: sf_urban_init_from_file 
 
    CALL nl_get_sf_urban_init_from_file( 1, sf_urban_init_from_file )
-! JJA
+
 
    CHECK = 0
 
@@ -2295,141 +2311,35 @@ MODULE module_sf_urban
 !-------------------------------------------------------------------------------
 ! Start WUR Modification
 !-------------------------------------------------------------------------------
-      IF( IVGTYP(I,J) == ISURBAN)  THEN
-         UTYPE_URB2D(I,J) = 2          ! for default. high-intensity
-         UTYPE_URB = UTYPE_URB2D(I,J)  ! for default. high-intensity
+      IF( IVGTYP(I,J) == ISURBAN)  THEN  ! Default: high-intensity
+         UTYPE_URB2D(I,J) = 2
+      ELSE IF( IVGTYP(I,J) == 31) THEN   ! low-intensity residential
+         UTYPE_URB2D(I,J) = 3
+      ELSE IF( IVGTYP(I,J) == 32) THEN   ! high-intensity
+         UTYPE_URB2D(I,J) = 2
+      ELSE IF( IVGTYP(I,J) == 33) THEN   ! Commercial/Industrial/Transportation
+         UTYPE_URB2D(I,J) = 1
+      END IF
+      UTYPE_URB = UTYPE_URB2D(I,J)
 
-         SWITCH_URB=1
-      ENDIF 
+    ! Check urban fraction
+    IF (FRC_URB2D(I,J)>=0.and.FRC_URB2D(I,J)<=1.) THEN
+      CONTINUE
+    ELSE
+      WRITE(mesg,*) 'WARNING, INVALID URBAN FRC_URB2D', I, J, FRC_URB2D(I,J)
+      call wrf_message(mesg)
+
+      WRITE(mesg,*) &
+        'WARNING, THE URBAN FRACTION WILL BE SET TO THE URBPARM.TBL VALUE', &
+        FRC_URB_TBL(UTYPE_URB)
+
+      call wrf_message(mesg)
+      FRC_URB2D(I,J) = FRC_URB_TBL(UTYPE_URB)
+    ENDIF         
+
 !-------------------------------------------------------------------------------
 ! End WUR Modification
 !-------------------------------------------------------------------------------
-
-            IF( IVGTYP(I,J) == 31) THEN
-               UTYPE_URB2D(I,J) = 3  ! low-intensity residential
-               UTYPE_URB = UTYPE_URB2D(I,J)  ! low-intensity residential
-               IF (HGT_URB2D(I,J)>0.) THEN
-                  CONTINUE
-               ELSE
-                  WRITE(mesg,*) 'USING DEFAULT URBAN MORPHOLOGY'
-                  call wrf_message(mesg)
-                  LP_URB2D(I,J)=0.
-                  LB_URB2D(I,J)=0.
-                  HGT_URB2D(I,J)=0.
-                  IF ( sf_urban_physics == 1 ) THEN
-                     MH_URB2D(I,J)=0.
-                     STDH_URB2D(I,J)=0.
-                     DO K=1,4
-                       LF_URB2D(I,K,J)=0.
-                     ENDDO
-                  ELSE IF ( ( sf_urban_physics == 2 ) .or. ( sf_urban_physics == 3 ) ) THEN
-                     DO K=1,num_urban_hi
-                        HI_URB2D(I,K,J)=0.
-                     ENDDO
-                  ENDIF
-               ENDIF
-                IF (FRC_URB2D(I,J)>0.and.FRC_URB2D(I,J)<=1.) THEN
-                  CONTINUE
-                ELSE
-                  WRITE(mesg,*) 'WARNING, FRC_URB2D = 0 BUT IVGTYP IS URBAN'
-                  call wrf_message(mesg)
-                  WRITE(mesg,*) 'WARNING, THE URBAN FRACTION WILL BE READ FROM URBPARM.TBL'
-                  call wrf_message(mesg)
-                  FRC_URB2D(I,J) = FRC_URB_TBL(UTYPE_URB)
-                ENDIF         
-              SWITCH_URB=1
-            ENDIF
-
-           IF( IVGTYP(I,J) == 32) THEN
-               UTYPE_URB2D(I,J) = 2  ! high-intensity
-               UTYPE_URB = UTYPE_URB2D(I,J)  ! high-intensity
-              IF (HGT_URB2D(I,J)>0.) THEN
-                  CONTINUE
-               ELSE
-                  WRITE(mesg,*) 'USING DEFAULT URBAN MORPHOLOGY'
-                  call wrf_message(mesg)
-                  LP_URB2D(I,J)=0.
-                  LB_URB2D(I,J)=0.
-                  HGT_URB2D(I,J)=0.
-                  IF ( sf_urban_physics == 1 ) THEN
-                     MH_URB2D(I,J)=0.
-                     STDH_URB2D(I,J)=0.
-                     DO K=1,4
-                       LF_URB2D(I,K,J)=0.
-                     ENDDO
-                  ELSE IF ( ( sf_urban_physics == 2 ) .or. ( sf_urban_physics == 3 ) ) THEN
-                     DO K=1,num_urban_hi
-                        HI_URB2D(I,K,J)=0.
-                     ENDDO
-                  ENDIF
-               ENDIF
-                IF (FRC_URB2D(I,J)>0.and.FRC_URB2D(I,J)<=1.) THEN
-                  CONTINUE
-                ELSE
-                  WRITE(mesg,*) 'WARNING, FRC_URB2D = 0 BUT IVGTYP IS URBAN'
-                  call wrf_message(mesg)
-                  WRITE(mesg,*) 'WARNING, THE URBAN FRACTION WILL BE READ FROM URBPARM.TBL'
-                  call wrf_message(mesg)
-                  FRC_URB2D(I,J) = FRC_URB_TBL(UTYPE_URB)
-                ENDIF
-              SWITCH_URB=1
-            ENDIF
-
-            IF( IVGTYP(I,J) == 33) THEN
-               UTYPE_URB2D(I,J) = 1  !  Commercial/Industrial/Transportation
-               UTYPE_URB = UTYPE_URB2D(I,J)  !  Commercial/Industrial/Transportation
-              IF (HGT_URB2D(I,J)>0.) THEN
-                  CONTINUE
-               ELSE
-                  WRITE(mesg,*) 'USING DEFAULT URBAN MORPHOLOGY'
-                  call wrf_message(mesg)
-                  LP_URB2D(I,J)=0.
-                  LB_URB2D(I,J)=0.
-                  HGT_URB2D(I,J)=0.
-                  IF ( sf_urban_physics == 1 ) THEN
-                     MH_URB2D(I,J)=0.
-                     STDH_URB2D(I,J)=0.
-                     DO K=1,4
-                       LF_URB2D(I,K,J)=0.
-                     ENDDO
-                  ELSE IF ( ( sf_urban_physics == 2 ) .or. ( sf_urban_physics == 3 ) ) THEN
-                     DO K=1,num_urban_hi
-                        HI_URB2D(I,K,J)=0.
-                     ENDDO
-                  ENDIF
-               ENDIF
-                IF (FRC_URB2D(I,J)>0.and.FRC_URB2D(I,J)<=1.) THEN
-                  CONTINUE
-                ELSE
-                  WRITE(mesg,*) 'WARNING, FRC_URB2D = 0 BUT IVGTYP IS URBAN'
-                  call wrf_message(mesg)
-                  WRITE(mesg,*) 'WARNING, THE URBAN FRACTION WILL BE READ FROM URBPARM.TBL'
-                  call wrf_message(mesg)
-                  FRC_URB2D(I,J) = FRC_URB_TBL(UTYPE_URB)
-                ENDIF
-               SWITCH_URB=1
-            ENDIF
-
-            IF (SWITCH_URB==1) THEN
-                CONTINUE
-            ELSE
-                FRC_URB2D(I,J)=0.
-                LP_URB2D(I,J)=0.
-                LB_URB2D(I,J)=0.
-                HGT_URB2D(I,J)=0.
-                IF ( sf_urban_physics == 1 ) THEN
-                   MH_URB2D(I,J)=0.
-                   STDH_URB2D(I,J)=0.
-                   DO K=1,4
-                      LF_URB2D(I,K,J)=0.
-                   ENDDO
-                ELSE IF ( ( sf_urban_physics == 2 ) .or. ( sf_urban_physics == 3 ) ) THEN
-                   DO K=1,num_urban_hi
-                      HI_URB2D(I,K,J)=0.
-                   ENDDO
-                ENDIF
-            ENDIF
-
 
       QC_URB2D(I,J)=0.01
 
@@ -2448,7 +2358,13 @@ MODULE module_sf_urban
 !
       TS_URB2D(I,J)=TSURFACE0_URB(I,J)+0.
 
-! JJA
+!-------------------------------------------------------------------------------
+! Start WUR Modification:
+!-------------------------------------------------------------------------------
+
+!  re-initialize fields from the surface scheme
+!  wnen they are not initialized frmo the boundaries
+
       IF(.not. sf_urban_init_from_file ) THEN
         TRL_URB3D(I,1,J)=TLAYER0_URB(I,1,J)+0.
         TRL_URB3D(I,2,J)=0.5*(TLAYER0_URB(I,1,J)+TLAYER0_URB(I,2,J))
@@ -2465,7 +2381,9 @@ MODULE module_sf_urban
         END DO
 
       ENDIF
-! JJA
+!-------------------------------------------------------------------------------
+! End WUR Modification
+!-------------------------------------------------------------------------------
       
 ! multi-layer urban
 !      IF( sf_urban_physics .EQ. 2)THEN
