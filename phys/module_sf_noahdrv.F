@@ -1222,6 +1222,16 @@ CONTAINS
             QSFC(I,J)= Q1/(1.0-Q1)
             UST(I,J)= FRC_URB2D(I,J)*UST_URB+(1-FRC_URB2D(I,J))*UST(I,J)      ![m/s]
 
+!
+! RJR calculation of 2 m temperature of green areas within urban environmetns
+!
+
+           TP2M_URB = T1-SHEAT/(SFCPRS/(287.04*T1*(1.+.61*Q1))*CP*CHS2(I,J))
+
+!
+! RJR end of calculation
+!
+
 #if 0
     IF(IPRINT)THEN
 
