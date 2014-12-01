@@ -291,7 +291,7 @@ MODULE module_sf_urban
                     TC2M,                                             & ! JJA
                     TP2M,                                             & ! JJA
                     UTCI,                                             & ! JJA
-                    TR, TB, TG, TC, QC, UC,                           & ! H
+                    TR, TB, TG, TC, QC, UC, ANTHEAT,                  & ! H
                     TRL,TBL,TGL,                                      & ! H
                     XXXR, XXXB, XXXG, XXXC,                           & ! H
                     TS,QS,SH,LH,LH_KINEMATIC,                         & ! O
@@ -426,7 +426,7 @@ MODULE module_sf_urban
    REAL, INTENT(INOUT):: TC2M                          ! 2 meter canyon temperature [K]
    REAL, INTENT(INOUT):: TP2M                          ! 2 meter canyon temperature in park [K]
    REAL, INTENT(INOUT):: UTCI                          ! Universal thermal comfort index [-]
-   REAL, INTENT(INOUT):: TR, TB, TG, TC, QC, UC
+   REAL, INTENT(INOUT):: TR, TB, TG, TC, QC, UC,ANTHEAT
    REAL, INTENT(INOUT):: XXXR, XXXB, XXXG, XXXC
 
    REAL, DIMENSION(1:num_roof_layers), INTENT(INOUT) :: TRL
@@ -582,6 +582,7 @@ MODULE module_sf_urban
 
 ! Miao, 2007/01/17, cal. ah
    if(ahoption==1) AH=AH*ahdiuprf(tloc)
+   if(ahoption==2) AH=ANTHEAT
 
    IF( ZDC+Z0C+2. >= ZA) THEN
     CALL wrf_error_fatal ("ZDC + Z0C + 2m is larger than the 1st WRF level "// &
@@ -1065,7 +1066,7 @@ MODULE module_sf_urban
 
    FLXUV  = ( R*CDR + RW*CDC )*UA*UA
 ! Miao, 2007/01/17, cal. ah
-   if(ahoption==1) then
+   if(ahoption==1 .or. ahoption==2) then
      FLXTH  = ( R*FLXTHR  + W*FLXTHB  + RW*FLXTHG ) + AH/RHOO/CPP
    else
      FLXTH  = ( R*FLXTHR  + W*FLXTHB  + RW*FLXTHG )

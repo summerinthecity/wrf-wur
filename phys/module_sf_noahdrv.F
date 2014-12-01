@@ -56,7 +56,7 @@ CONTAINS
                   CMR_SFCDIF,CHR_SFCDIF,CMC_SFCDIF,CHC_SFCDIF,  &
 !Optional Urban
                   TR_URB2D,TB_URB2D,TG_URB2D,TC_URB2D,QC_URB2D, & !H urban
-                  UC_URB2D,                                     & !H urban
+                  UC_URB2D,ANTHEAT_URB2D,                       & !H urban
                   XXXR_URB2D,XXXB_URB2D,XXXG_URB2D,XXXC_URB2D,  & !H urban
                   TRL_URB3D,TBL_URB3D,TGL_URB3D,                & !H urban
                   SH_URB2D,LH_URB2D,G_URB2D,RN_URB2D,TS_URB2D,  & !H urban
@@ -442,6 +442,7 @@ CONTAINS
      REAL :: COSZ_URB     ! cosz
      REAL :: OMG_URB      ! hour angle
      REAL :: ZNT_URB      ! roughness length                       [m]
+     REAL :: ANTHEAT_URB
      REAL :: TC2M_URB
      REAL :: TP2M_URB
      REAL :: UTCI_URB
@@ -460,6 +461,8 @@ CONTAINS
      REAL, DIMENSION(1:num_road_layers) :: TGL_URB  ! road layer temp [K]
      LOGICAL  :: LSOLAR_URB
 ! state variable surface_driver <--> lsm <--> urban
+     REAL, OPTIONAL, DIMENSION( ims:ime, jms:jme ), INTENT(INOUT) :: ANTHEAT_URB2D
+
      REAL, OPTIONAL, DIMENSION( ims:ime, jms:jme ), INTENT(INOUT) :: TR_URB2D
      REAL, OPTIONAL, DIMENSION( ims:ime, jms:jme ), INTENT(INOUT) :: TB_URB2D
      REAL, OPTIONAL, DIMENSION( ims:ime, jms:jme ), INTENT(INOUT) :: TG_URB2D
@@ -1105,6 +1108,8 @@ CONTAINS
             QC_URB = QC_URB2D(I,J)
             UC_URB = UC_URB2D(I,J)
 
+            ANTHEAT_URB = ANTHEAT_URB2D(I,J)
+    
             DO K = 1,num_roof_layers
               TRL_URB(K) = TRL_URB3D(I,K,J)
             END DO
@@ -1171,6 +1176,7 @@ CONTAINS
                        TP2M_URB,                                        & ! JJA
                        UTCI_URB,                                        & ! JJA
                        TR_URB, TB_URB, TG_URB, TC_URB, QC_URB,UC_URB,   & ! H
+                       ANTHEAT_URB,                                     & 
                        TRL_URB,TBL_URB,TGL_URB,                         & ! H
                        XXXR_URB, XXXB_URB, XXXG_URB, XXXC_URB,          & ! H
                        TS_URB,QS_URB,SH_URB,LH_URB,LH_KINEMATIC_URB,    & ! O
