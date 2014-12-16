@@ -2281,8 +2281,6 @@ MODULE module_sf_urban
    INTEGER, DIMENSION( ims:ime, jms:jme ), INTENT(INOUT) :: UTYPE_URB2D
    INTEGER                                            :: UTYPE_URB
 !FS
-   INTEGER :: SWITCH_URB
-
    INTEGER :: I,J,K,CHECK
 
 ! JJA
@@ -2308,23 +2306,21 @@ MODULE module_sf_urban
       G_URB2D(I,J)=0.
       RN_URB2D(I,J)=0.
       
-!m
-!FS   FRC_URB2D(I,J)=0.
-      UTYPE_URB2D(I,J)=0
-      SWITCH_URB=0
-
 !-------------------------------------------------------------------------------
 ! Start WUR Modification
 !-------------------------------------------------------------------------------
-      IF( IVGTYP(I,J) == ISURBAN)  THEN ! Default: high-intensity
-         UTYPE_URB = 2
+      UTYPE_URB = 0 ! No urban
+
+      IF( IVGTYP(I,J) == ISURBAN)  THEN
 
          IF (sf_urban_use_wur_config) THEN                     ! Hires input required by namelist
              IF (FRC_URB2D(I,J)>0.and.FRC_URB2D(I,J)<=1.) THEN ! .. and available
-                UTYPE_URB = 4
-             ELSE                                              ! .. but not available
+                UTYPE_URB = 4            ! WUR-Custom
+             ELSE                                              ! .. but not valid
                 WRITE(mesg,*) 'INVALID URBAN FRC_URB2D', I, J, FRC_URB2D(I,J)
                 call wrf_message(mesg)
+
+                UTYPE_URB = 2            ! Default: high-intensity
              END IF         
          END IF
       ELSE IF( IVGTYP(I,J) == 31) THEN   ! low-intensity residential
@@ -2334,8 +2330,8 @@ MODULE module_sf_urban
       ELSE IF( IVGTYP(I,J) == 33) THEN   ! Commercial/Industrial/Transportation
          UTYPE_URB = 1
       END IF
-      UTYPE_URB2D(I,J) = UTYPE_URB
 
+      UTYPE_URB2D(I,J) = UTYPE_URB
 !-------------------------------------------------------------------------------
 ! End WUR Modification
 !-------------------------------------------------------------------------------
