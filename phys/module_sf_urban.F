@@ -10,8 +10,7 @@ MODULE module_sf_urban
 !    1) Get the urban category from the landuse, use default category 2.
 !       This allows you to specify high- and  low-intensity and commercial areas when more detailed input is unavailable.
 !    2) Read all urban paramters from the URBPARM.TBL
-!    3) If the sf_urban_use_wur_config flag is set, recalculate geometry related canyon properties using extra input fields lp,lp,hgt,stdhgt
-!    4) Check urban faction FRC_URB2D, if it is not a valid number, ie. in [0,1], set it to the default for the urban category.
+!    3) If the sf_urban_use_wur_config flag is set, recalculate geometry related canyon properties using extra input fields lp,lp,hgt,stdhgt where available.
 !
 ! Run time initialization:
 !    Restart:
@@ -518,8 +517,6 @@ MODULE module_sf_urban
    REAL :: SHC    ! Canyon Sensible heat flux   [W/m/m]
    REAL :: SSRT   ! radiative flux
 
-   ! JJA switch for urban config: true=hi-res LP, LB, and HGHT etc. false=the urban categories from URBPARM.TBL
-   LOGICAL sf_urban_use_wur_config
 !
 ! RJR additional variables for calculating canyon 2m temperature accoding to Theeuwes et al. (2014)
 !
@@ -552,7 +549,7 @@ MODULE module_sf_urban
    CALL read_param(UTYPE,ZR,SIGMA_ZED,Z0C,Z0HC,ZDC,SVF,R,RW,HGT,  &
                    AH,CAPR,CAPB,CAPG,AKSR,AKSB,AKSG,ALBR,ALBB,    &
                    ALBG,EPSR,EPSB,EPSG,Z0R,Z0B,Z0G,Z0HB,Z0HG,     &
-                   BETR,BETB,BETG,TRLEND,TBLEND,TGLEND,           &
+                   BETR,BETB,BETG,FRC_URB,TRLEND,TBLEND,TGLEND,   &
 !for BEP
                    NUMDIR, STREET_DIRECTION, STREET_WIDTH,        & 
                    BUILDING_WIDTH, NUMHGT, HEIGHT_BIN,            & 
@@ -568,8 +565,7 @@ MODULE module_sf_urban
 ! Attema, 2014/07/24
 !-------------------------------------------------------------------------------
 
-  CALL nl_get_sf_urban_use_wur_config( 1, sf_urban_use_wur_config )
-  IF( sf_urban_use_wur_config ) THEN
+  IF( UTYPE .eq. 4 ) THEN
     CALL update_param_wur(lp_urb,frc_urb,lb_urb,hgt_urb,stdh_urb,lf_urb,&
                           u1,v1,&
                           ZR,Z0C,Z0HC,ZDC,SVF,R,RW,HGT,Z0R)
@@ -1547,7 +1543,6 @@ MODULE module_sf_urban
    REAL :: lambda_f, lambda_fr
    REAL :: VFWS,VFGS 
 
-
   ! Calculate normalization height based on BEP formulation
 
   IF(lb_urb .GT. lp_urb)THEN
@@ -1636,7 +1631,7 @@ MODULE module_sf_urban
                          ZR,SIGMA_ZED,Z0C,Z0HC,ZDC,SVF,R,RW,HGT,AH,    & ! out
                          CAPR,CAPB,CAPG,AKSR,AKSB,AKSG,ALBR,ALBB,ALBG, & ! out
                          EPSR,EPSB,EPSG,Z0R,Z0B,Z0G,Z0HB,Z0HG,         & ! out
-                         BETR,BETB,BETG,TRLEND,TBLEND,TGLEND,          & ! out
+                         BETR,BETB,BETG,FRC_URB,TRLEND,TBLEND,TGLEND,  & ! out
 !for BEP
                          NUMDIR, STREET_DIRECTION, STREET_WIDTH,       & ! out
                          BUILDING_WIDTH, NUMHGT, HEIGHT_BIN,           & ! out
@@ -1652,6 +1647,10 @@ MODULE module_sf_urban
                            SIGMA_ZED,                                    &
                            EPSR,EPSB,EPSG,Z0R,Z0B,Z0G,Z0HB,Z0HG,         &
                            BETR,BETB,BETG,TRLEND,TBLEND,TGLEND
+
+!WUR: Set for urban types 1,2, and 3. Ingored for type 4.
+   REAL, INTENT(INOUT)  :: FRC_URB
+
    REAL, INTENT(OUT)    :: AKANDA_URBAN
 !for BEP
    INTEGER,                     INTENT(OUT) :: NUMDIR
@@ -1680,7 +1679,10 @@ MODULE module_sf_urban
    BETB=    BETB_TBL(UTYPE)
    BETG=    BETG_TBL(UTYPE)
 
-!m   FRC_URB= FRC_URB_TBL(UTYPE)
+   ! Use urban fraction from the table, except for WUR-Custom 
+   IF( UTYPE .ne. 4) THEN
+      FRC_URB=FRC_URB_TBL(UTYPE)
+   ENDIF
 
    CAPR=    CAPR_TBL(UTYPE)
    CAPB=    CAPB_TBL(UTYPE)
@@ -2285,8 +2287,10 @@ MODULE module_sf_urban
 
 ! JJA
    LOGICAL :: sf_urban_init_from_file 
+   LOGICAL :: sf_urban_use_wur_config
 
    CALL nl_get_sf_urban_init_from_file( 1, sf_urban_init_from_file )
+   CALL nl_get_sf_urban_use_wur_config( 1, sf_urban_use_wur_config )
 
 
    CHECK = 0
@@ -2312,31 +2316,25 @@ MODULE module_sf_urban
 !-------------------------------------------------------------------------------
 ! Start WUR Modification
 !-------------------------------------------------------------------------------
-      IF( IVGTYP(I,J) == ISURBAN)  THEN  ! Default: high-intensity
-         UTYPE_URB2D(I,J) = 2
+      IF( IVGTYP(I,J) == ISURBAN)  THEN ! Default: high-intensity
+         UTYPE_URB = 2
+
+         IF (sf_urban_use_wur_config) THEN                     ! Hires input required by namelist
+             IF (FRC_URB2D(I,J)>0.and.FRC_URB2D(I,J)<=1.) THEN ! .. and available
+                UTYPE_URB = 4
+             ELSE                                              ! .. but not available
+                WRITE(mesg,*) 'INVALID URBAN FRC_URB2D', I, J, FRC_URB2D(I,J)
+                call wrf_message(mesg)
+             END IF         
+         END IF
       ELSE IF( IVGTYP(I,J) == 31) THEN   ! low-intensity residential
-         UTYPE_URB2D(I,J) = 3
+         UTYPE_URB = 3
       ELSE IF( IVGTYP(I,J) == 32) THEN   ! high-intensity
-         UTYPE_URB2D(I,J) = 2
+         UTYPE_URB = 2
       ELSE IF( IVGTYP(I,J) == 33) THEN   ! Commercial/Industrial/Transportation
-         UTYPE_URB2D(I,J) = 1
+         UTYPE_URB = 1
       END IF
-      UTYPE_URB = UTYPE_URB2D(I,J)
-
-    ! Check urban fraction
-    IF (FRC_URB2D(I,J)>=0.and.FRC_URB2D(I,J)<=1.) THEN
-      CONTINUE
-    ELSE
-      WRITE(mesg,*) 'WARNING, INVALID URBAN FRC_URB2D', I, J, FRC_URB2D(I,J)
-      call wrf_message(mesg)
-
-      WRITE(mesg,*) &
-        'WARNING, THE URBAN FRACTION WILL BE SET TO THE URBPARM.TBL VALUE', &
-        FRC_URB_TBL(UTYPE_URB)
-
-      call wrf_message(mesg)
-      FRC_URB2D(I,J) = FRC_URB_TBL(UTYPE_URB)
-    ENDIF         
+      UTYPE_URB2D(I,J) = UTYPE_URB
 
 !-------------------------------------------------------------------------------
 ! End WUR Modification
@@ -2397,10 +2395,10 @@ MODULE module_sf_urban
 !MT        TRB_URB4D(I,K,J)=tlayer0_urb(I,1,J)
 !MT        TW1_URB4D(I,K,J)=tlayer0_urb(I,1,J)
 !MT        TW2_URB4D(I,K,J)=tlayer0_urb(I,1,J)
-        IF (UTYPE_URB2D(I,J) > 0) THEN
-           TRB_URB4D(I,K,J)=TBLEND_TBL(UTYPE_URB2D(I,J))
-           TW1_URB4D(I,K,J)=TBLEND_TBL(UTYPE_URB2D(I,J))
-           TW2_URB4D(I,K,J)=TBLEND_TBL(UTYPE_URB2D(I,J))
+        IF (UTYPE_URB > 0) THEN
+           TRB_URB4D(I,K,J)=TBLEND_TBL(UTYPE_URB)
+           TW1_URB4D(I,K,J)=TBLEND_TBL(UTYPE_URB)
+           TW2_URB4D(I,K,J)=TBLEND_TBL(UTYPE_URB)
         ELSE
            TRB_URB4D(I,K,J)=tlayer0_urb(I,1,J)
            TW1_URB4D(I,K,J)=tlayer0_urb(I,1,J)
