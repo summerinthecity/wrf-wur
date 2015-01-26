@@ -2,7 +2,7 @@
 
 import netCDF4 as cdf
 
-newval = 23.5 + 272.15  # in Kelvin
+newval = 23.5 + 273.15  # in Kelvin
 
 files=[ 'wrfinput_d03' , 'wrfinput_d04' ]
 
