@@ -185,7 +185,7 @@ def main():
     parser.add_argument("-r", "--ratio", type=int, help="The parent_grid_ratio, default is 5", default=5 )
     parser.add_argument("-x", "--sizex", type=float, help="Size of the domain in km", default=10 )
     parser.add_argument("-y", "--sizey", type=float, help="Size of the domain in km", default=10 )
-    parser.add_argument('namelist', metavar="namelist",  type=str, nargs=1, help='an integer for the accumulator')
+    parser.add_argument('namelist', metavar="namelist",  type=str, nargs=1, help="WRF namelist containing 'share' and 'geogrid' sections")
     args = parser.parse_args()
     print args
 
