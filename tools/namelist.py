@@ -23,7 +23,10 @@ def main():
         while len(path) > 1:
             crumb = crumb[ path[0] ]
             path.pop(0)
-        print crumb[ path[0] ]
+        if type( crumb ) == type( [] ):
+            print crumb[ int(path[0]) ]
+        else:
+            print crumb[ path[0] ]
         
     elif args.set:
         path = args.set[0].split ( ':' )
