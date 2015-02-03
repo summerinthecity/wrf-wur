@@ -1,5 +1,8 @@
 #!/bin/bash
 
+# abort on any error (ie. non-zero exit status)
+set -e
+
 ###########################3
 # Forecast config:
 
@@ -8,9 +11,11 @@ CONFIG=/home/jiska/forecast.config
 ARCHIVE=/home/jiska/archive            # Must exist
 
 
+
 # location of external tools
 NCDUMP=ncdump
 NC3TONC4=nc3tonc4
+NAMELIST=./namelist.py
 
 
 
@@ -19,6 +24,14 @@ NC3TONC4=nc3tonc4
 NDOMS=5
 DATESTART="2012-09-06"
 ##################################
+
+
+function repeat {
+    str=$1
+    count=$2
+   
+    printf "%${count}s" | sed "s/ /${str},/g"
+}
 
 
 MANUAL="
@@ -68,7 +81,7 @@ function log {
 
 function help {
     printf '%s\n' "$MANUAL"
-    exit -1
+    exit 
 }
 
 function status {
@@ -146,24 +159,14 @@ function prepare_date {
         exit 1;
     fi
 
-    YEAR=`echo $DATESTART | sed 's/-/ /g' | awk '{print $1}'`
+    YEAR=` echo $DATESTART | sed 's/-/ /g' | awk '{print $1}'`
     MONTH=`echo $DATESTART | sed 's/-/ /g' | awk '{print $2}'`
-    DAY=`echo $DATESTART | sed 's/-/ /g' | awk '{print $3}'`
+    DAY=`  echo $DATESTART | sed 's/-/ /g' | awk '{print $3}'`
 
     # create a new namelist
-    cat namelist.input | \
-    sed -e "s/^.*START_YEAR.*$/START_YEAR = $NDOMS*$YEAR/"    \
-        -e "s/^.*START_MONTH.*$/START_MONTH = $NDOMS*$MONTH/" \
-        -e "s/^.*START_DAY.*$/START_DAY = $NDOMS*$DAY/"    >  \
-    namelist.new || (
-        printf "$0 [$LINENO]: Unable to create namelist, aborting\n"
-        exit 1
-    )
-
-    mv namelist.new namelist.input || (
-        printf "$0 [$LINENO]: Unable to write namelist, aborting\n"
-        exit 1
-    )
+    echo $NAMELIST --set time_control:start_year  \'`repeat $YEAR  $NDOMS`\' namelist.input
+    echo $NAMELIST --set time_control:start_month \'`repeat $MONTH $NDOMS`\' namelist.input
+    echo $NAMELIST --set time_control:start_day   \'`repeat $DAY   $NDOMS`\' namelist.input
 }
 
 # Zip WRF timeseries files
@@ -342,9 +345,6 @@ case "$1" in
             ;;
             esac
     ;;
-    help)
-        help
-    ;;
     status)
         status
         exit
@@ -353,7 +353,12 @@ case "$1" in
         case "$2" in
         *) echo TOOD
         esac ;;
-    *) echo "Internal error!" ; exit 1 ;;
+    help)
+        help
+    ;;
+    *)
+        help
+    ;;
 esac 
 
 log "$1 $2 $3"

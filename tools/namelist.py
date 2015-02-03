@@ -43,12 +43,18 @@ def main():
             crumb[ path[0] ] = args.set[1]
         elif t == type( [] ):
             t = type( crumb[path[0]][0] )
+
+            # deal with trailing ',' leading to empty string, crashing int() and float()
+            l = args.set[1].split(',')
+            while l[-1] == "":
+                l.pop()
+
             if t == type( 1 ):
-                crumb[ path[0] ] = [int(i) for i in args.set[1].split(',')]
+                crumb[ path[0] ] = [int(i) for i in l]
             if t == type( 1.0 ):
-                crumb[ path[0] ] = [float(i) for i in args.set[1].split(',')]
+                crumb[ path[0] ] = [float(i) for i in l]
             if t == type( '' ):
-                crumb[ path[0] ] = args.set[1].split(',')
+                crumb[ path[0] ] = l
 
         f90nml.write( namelist, args.namelist[0], force=True )
 
