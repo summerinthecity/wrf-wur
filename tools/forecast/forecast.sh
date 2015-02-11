@@ -6,8 +6,9 @@ set -e
 ###########################3
 # Forecast config:
 
-CYCLESTEP="1 day"  # time between two forecast runs
-CYCLELEN="2 days"  # length of a forecast run
+CYCLESTEP=24        # time between two forecast runs in hours
+CYCLELEN=48         # length of a forecast run in hours
+BOUNDARYINTERVAL=6  # time between boundaries, in hours
 
 # Index in netCDF file to use for copy_urban and copy_surface
 CYCLEINDEX[01]=0
@@ -20,7 +21,7 @@ CYCLEINDEX[05]=0
 CONFIG=/home/jiska/forecast.config
 
 # working directories
-DATDIR=/home/jiska/WRF/tars/dat
+DATDIR=/data/hdd/ECMWF_OPAN
 WPSDIR=/home/jiska/WRF/tars/WPS
 RUNDIR=/home/jiska/WRF/tars/WRFV3/run
 ARCDIR=/home/jiska/archive
@@ -94,6 +95,25 @@ function forecastinit {
     fi
 }
 
+
+# Return a list of boundary filenames for the ECMWF operational analysis
+function boundary_list_ecmwf_opan {
+    start=$1
+    out=$2
+
+    LIST=""
+    for i in `seq 0 $BOUNDARYINTERVAL $CYCLELEN`; do
+
+        YMD=`date --date "$start $i hours" +%Y%m%d`
+        HM=`date --date "$start $i hours" +%_k | tr -d ' '`
+        if [[ "$HM" != "0" ]]; then
+            HM=${HM}00
+        fi
+        LIST="$LIST $DATDIR/AN${YMD}${HM}sig"
+    done
+
+    eval "$out='${LIST}'"
+}
 
 function repeat {
     str=$1
@@ -455,7 +475,7 @@ function prepare_date {
     fi
 
     if [ "next" == $1 ]; then
-        DATESTART=`date --date "$DATESTART $CYCLESTEP" +%F`
+        DATESTART=`date --date "$DATESTART $CYCLESTEP hours" +%F`
     else
         DATESTART=$1
     fi
@@ -468,7 +488,7 @@ function prepare_date {
     $NAMELIST --set time_control:start_day   `repeat $DAY   $NDOMS` namelist.input
 
     # Set ending date
-    DATEEND=`date --date "$DATESTART $CYCLELEN" +%F`
+    DATEEND=`date --date "$DATESTART $CYCLELEN hours" +%F`
 
     splitdate $DATEEND YEAR MONTH DAY
     $NAMELIST --set time_control:end_year  `repeat $YEAR  $NDOMS` namelist.input
@@ -483,18 +503,20 @@ function prepare_date {
 function prepare_boundaries {
     OLDCWD=`pwd`
 
-    if [[ ! -d "$WPSDIR"  || ! -d "$DATDIR" || ! -d "$RUNDIR" ]]; then
-        printf "$0 [$LINENO]: One of WPSDIR, DATDIR, or RUNDIR not set. Aborting\n"
+    if [[ ! -d "$WPSDIR"  || ! -d "$DATDIR" || ! -d "$RUNDIR" || -z "$DATESTART" ]]; then
+        printf "$0 [$LINENO]: One of WPSDIR, DATDIR, RUNDIR, or DATESTART not set. Aborting\n"
         exit -1
     fi;
 
+    boundary_list_ecmwf_opan $DATESTART FILES
+
     # clean start
+    cd $WPSDIR
     rm -f GRIBFILE.???
     rm -f FILE:????-??-??_??
 
-    cd $WPSDIR
     rm -f prepare_boundaries.log
-    ./link_grib.csh "$DATDIR/*" 2>&1 >> $RUNDIR/prepare_boundaries.log
+    ./link_grib.csh "$FILES"    2>&1 >> $RUNDIR/prepare_boundaries.log
     ./ungrib.exe                2>&1 >> $RUNDIR/prepare_boundaries.log
     ./metgrid.exe               2>&1 >> $RUNDIR/prepare_boundaries.log
 
@@ -521,7 +543,7 @@ function prepare_urban {
         exit -1
     fi
     if [ "previous" == "$1" ]; then
-        CYCLEDATE=`date --date "$DATESTART $CYCLESTEP ago" +%F`
+        CYCLEDATE=`date --date "$DATESTART $CYCLESTEP hours ago" +%F`
     else
         CYCLEDATE=$1
     fi
