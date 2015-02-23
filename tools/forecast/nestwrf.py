@@ -14,6 +14,34 @@ import sys
 #  Y Y Y Y Y Y Y Y Y Y Y Y Y Y Y Y   e_we = 5 * 3 + 1 (refinement * 3 parent grid points + 1 )
 #
 
+
+def fixshare( share ):
+    """Make sure the namelist variables that should be a list, are indeed a list"""
+    if type( share['start_date']) != type([]):
+        share['start_date'] = [ share['start_date'] ]
+    if type( share['end_date']) != type([]):
+        share['end_date'] = [ share['end_date'] ]
+    return share
+
+
+def fixgeogrid( geogrid ):
+    """Make sure the namelist variables that should be a list, are indeed a list"""
+    if type(geogrid['parent_id']) != type([]):
+        geogrid['parent_id']           = [ geogrid['parent_id']         ]
+    if type(geogrid['parent_grid_ratio']) != type([]):
+        geogrid['parent_grid_ratio']   = [ geogrid['parent_grid_ratio'] ]
+    if type(geogrid['i_parent_start']) != type([]):
+        geogrid['i_parent_start']      = [ geogrid['i_parent_start']    ]
+    if type(geogrid['j_parent_start']) != type([]):
+        geogrid['j_parent_start']      = [ geogrid['j_parent_start']    ]
+    if type(geogrid['e_we']) != type([]):
+        geogrid['e_we']                = [ geogrid['e_we']              ]
+    if type(geogrid['e_sn']) != type([]):
+        geogrid['e_sn']                = [ geogrid['e_sn']              ]
+    if type(geogrid['geog_data_res']) != type([]):
+        geogrid['geog_data_res']       = [ geogrid['geog_data_res']     ]
+    return geogrid
+
 def parsenl( namelist ):
     """Parse a WRF namelist, typically namelist.wps, for the grid description
     Returns:
@@ -93,29 +121,53 @@ def printgrids(namelist):
         print "Center    °      {:>12.6f} {:>12.6f}".format( cy, cx )
         print "Extent    °      {:>12.2f} {:>12.2f}".format( n - s , e - w )
 
-def appendnest(namelist, parent_id, parent_grid_ratio, i_parent_start, j_parent_start, e_we, e_sn):
+    
+
+def addnest(namelist, parent_id, parent_grid_ratio, i_parent_start, j_parent_start, e_we, e_sn):
     """Add a nested grid to the namelist using given parameters:
     parent_id (starts counting a 1, fortran style), parent_grid_ratio, i_parent_start, j_parent_start,
     e_we, e_sn (in gridpoitns)
     NOTE: also copies the geog_data_res,start_date, and end_date from the parent grid.
     """
 
+    def append( a, i, b ):
+        """Append item 'b' to list 'a' at the i'th position."""
+        if(len(a) > i):
+            a[i] = b
+        else:
+            while(len(a) <= i):
+                a.append(b)
+
+        return a
+
+    def copy( a, i, j):
+        """Copy element i to element j from list 'a'"""
+        m = max(i,j)
+        while(len(a) <= m):
+            a.append( 0 )
+        a[j] = a[i]
+        return a
+
     share = namelist['share']
-    share['max_dom'] += 1
-    share['start_date'].append( share['start_date'][ parent_id - 1] )
-    share['end_date'].append( share['end_date'][ parent_id - 1] )
-
     geogrid = namelist['geogrid']
-    geogrid['parent_id'].append( parent_id )
-    geogrid['parent_grid_ratio'].append( parent_grid_ratio )
-    geogrid['i_parent_start'].append( i_parent_start )
-    geogrid['j_parent_start'].append( j_parent_start )
-    geogrid['e_we'].append( e_we )
-    geogrid['e_sn'].append( e_sn )
-    geogrid['geog_data_res'].append( geogrid['geog_data_res'][ parent_id - 1] )
+
+    share['max_dom'] += 1
+    i = share['max_dom'] - 1 # Fortran -> C indexing
+
+    share['start_date'] = copy( share['start_date'], parent_id - 1, i )
+    share['end_date']   = copy( share['end_date'],   parent_id - 1, i ) 
+
+    geogrid['parent_id']           = append( geogrid['parent_id'], i, parent_id )
+    geogrid['parent_grid_ratio']   = append( geogrid['parent_grid_ratio'], i, parent_grid_ratio )
+    geogrid['i_parent_start']      = append( geogrid['i_parent_start'], i, i_parent_start )
+    geogrid['j_parent_start']      = append( geogrid['j_parent_start'], i, j_parent_start )
+    geogrid['e_we']                = append( geogrid['e_we'], i, e_we )
+    geogrid['e_sn']                = append( geogrid['e_sn'], i, e_sn )
+    geogrid['geog_data_res']       = copy( geogrid['geog_data_res'], parent_id - 1, i )
 
 
-def add_centered_nest( namelist, parent_id, parent_grid_ratio, clon, clat, sizex, sizey):
+
+def add_centered_nest( namelist, parent_id, parent_grid_ratio, clat, clon, sizex, sizey):
     """Add a nested grid with its centered at (clon, clat) in degrees, with an extend of sizex by sizey kilometers.
     The size is adjusted as necessary to match the parent grid"""
     
@@ -144,7 +196,7 @@ def add_centered_nest( namelist, parent_id, parent_grid_ratio, clon, clat, sizex
     print "e_we:     ", e_we
     print "e_we:     ", e_sn
 
-    appendnest( namelist, parent_id, parent_grid_ratio, starti, startj, e_we, e_sn)
+    addnest( namelist, parent_id, parent_grid_ratio, starti, startj, e_we, e_sn)
 
 def add_rectangular_nest( namelist, parent_id, parent_grid_ratio, newn, neww, news, newe ):
     """Add a nested grid with corners (newn, neww) and (news, newe) in degrees
@@ -173,7 +225,7 @@ def add_rectangular_nest( namelist, parent_id, parent_grid_ratio, newn, neww, ne
     print "e_we:           ", e_we
     print "e_sn:           ", e_sn
 
-    appendnest( namelist, parent_id, parent_grid_ratio, starti, startj, e_we, e_sn)
+    addnest( namelist, parent_id, parent_grid_ratio, starti, startj, e_we, e_sn)
 
 def main():
     parser = argparse.ArgumentParser(description="Add a nested grid to an existing WRF namelist")
@@ -190,6 +242,9 @@ def main():
     print args
 
     namelist = f90nml.read( args.namelist[0] )
+    namelist['geogrid'] = fixgeogrid( namelist['geogrid'] )
+    namelist['share']   = fixshare( namelist['share'] )
+
     if args.center:
         if not args.out:
             args.out = args.namelist
