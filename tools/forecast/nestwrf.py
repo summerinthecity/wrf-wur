@@ -251,14 +251,14 @@ def main():
             print args.out, "update"
 
         add_centered_nest( namelist, args.parent_id, args.ratio, args.center[0], args.center[1], args.sizex, args.sizey )
-        namelist.write( args.out, force=True)
+        namelist.write( args.out[0], force=True)
     elif args.box:
         if not args.out:
             args.out = args.namelist
             print args.out, "update"
 
         add_rectangular_nest( namelist, args.parent_id, args.ratio, args.box[0], args.box[1], args.box[2], args.box[3] )
-        namelist.write( args.out, force=True)
+        namelist.write( args.out[0], force=True)
     else:
         print args.namelist[0]
         printgrids( namelist )
