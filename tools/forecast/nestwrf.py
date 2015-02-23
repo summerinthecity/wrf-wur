@@ -230,7 +230,7 @@ def add_rectangular_nest( namelist, parent_id, parent_grid_ratio, newn, neww, ne
 def main():
     parser = argparse.ArgumentParser(description="Add a nested grid to an existing WRF namelist")
     parser.add_argument("-o", "--out", type=str, help="The output namelist, defaults to the input namelist.wps" )
-    parser.add_argument("-c", "--center", help="Add a centered nested grid", nargs=2, metavar=('longitude','latitude'), default=False )
+    parser.add_argument("-c", "--center", help="Add a centered nested grid", nargs=2, metavar=('latitude','longitude'), default=False )
     parser.add_argument("-b", "--box", help="Add a nested grid defined by its corners", nargs=4, default=False,
                         metavar=('north','west','south','east' )  )
     parser.add_argument("-p", "--parent_id", type=int, help="The parent_id", default=1 )
