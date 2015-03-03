@@ -206,7 +206,7 @@ variables:
             rainnc:_Shuffle = 1;
 
         float clw(time,station) ;
-            clw:units = "?" ; 
+            clw:units = "kg/m2" ; 
             clw:standard_name = "clw" ;
             clw:long_name = "total column-integrated water vapor and cloud variables" ;
             clw:least_significant_digit = 2 ;
