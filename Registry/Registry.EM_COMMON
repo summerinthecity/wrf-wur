@@ -601,6 +601,9 @@ state    real   ts_tslb         ?!       misc      -         -      -        "TS
 state    real   ts_clw          ?!       misc      -         -      -        "TS_CLW"         "Column integrated cloud water"
 state    real   ts_rainc        ?!       misc      -         -      -        "TS_RAINC"       "Cumulus precip"
 state    real   ts_rainnc       ?!       misc      -         -      -        "TS_RAINNC"      "Grid-scale precip"
+state    real   ts_tp2m         ?!       misc      -         -      -        "TS_TP2M"        "Urban canopy 2m temperature in park"
+state    real   ts_tc2m         ?!       misc      -         -      -        "TS_TP2M"        "Urban canopy 2m temperature"
+
 
 # Time series of vertical profile of U, V, GHT, THETA and QVAPOR
 state    real   ts_u_profile   ?!k       misc      -         -      -        "TS_U_PROFILE"   "Wind u-Component, earth relative, vertical profile"

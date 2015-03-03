@@ -391,6 +391,8 @@ SUBROUTINE calc_ts( grid )
 #else
          grid%ts_tsk(n,i)  = grid%nmm_tsk(ix,iy)
 #endif
+         grid%ts_tc2m(n,i) = grid%tc2m_urb2d(ix,iy)
+         grid%ts_tp2m(n,i) = grid%tp2m_urb2d(ix,iy)
          grid%ts_tslb(n,i) = grid%tslb(ix,1,iy)
    
       ELSE
@@ -419,6 +421,8 @@ SUBROUTINE calc_ts( grid )
          grid%ts_rainnc(n,i) = 1.E30
 #endif
          grid%ts_tsk(n,i)  = 1.E30
+         grid%ts_tc2m(n,i) = 1.E30
+         grid%ts_tp2m(n,i) = 1.E30
          grid%ts_tslb(n,i) = 1.E30
    
       END IF
@@ -534,6 +538,12 @@ SUBROUTINE write_ts( grid )
    ts_buf(:,:) = grid%ts_tsk(:,:)
    CALL wrf_dm_min_reals(ts_buf(:,:),grid%ts_tsk(:,:),grid%ts_buf_size*grid%max_ts_locs)
 
+   ts_buf(:,:) = grid%ts_tc2m(:,:)
+   CALL wrf_dm_min_reals(ts_buf(:,:),grid%ts_tc2m(:,:),grid%ts_buf_size*grid%max_ts_locs)
+
+   ts_buf(:,:) = grid%ts_tp2m(:,:)
+   CALL wrf_dm_min_reals(ts_buf(:,:),grid%ts_tp2m(:,:),grid%ts_buf_size*grid%max_ts_locs)
+
    ts_buf(:,:) = grid%ts_tslb(:,:)
    CALL wrf_dm_min_reals(ts_buf(:,:),grid%ts_tslb(:,:),grid%ts_buf_size*grid%max_ts_locs)
 
@@ -557,7 +567,7 @@ SUBROUTINE write_ts( grid )
          DO n=1,grid%next_ts_time - 1
 
 #if (EM_CORE == 1)
-            WRITE(UNIT=iunit,FMT='(i2,f13.6,i5,i5,i5,1x,14(f13.5,1x))')  &
+            WRITE(UNIT=iunit,FMT='(i2,f13.6,i5,i5,i5,1x,16(f13.5,1x))')  &
                               grid%id, grid%ts_hour(n,i),                &
                               grid%id_tsloc(i), ix, iy,                  &
                               grid%ts_t(n,i),                            &
@@ -573,7 +583,9 @@ SUBROUTINE write_ts( grid )
                               grid%ts_tslb(n,i),                         &
                               grid%ts_rainc(n,i),                        &
                               grid%ts_rainnc(n,i),                       &
-                              grid%ts_clw(n,i)
+                              grid%ts_clw(n,i),                          &
+                              grid%ts_tc2m(n,i),                         &
+                              grid%ts_tp2m(n,i)
 #else
             WRITE(UNIT=iunit,FMT='(i2,f13.6,i5,i5,i5,1x,7(f13.5,1x))')   &
                               grid%id, grid%ts_hour(n,i),                &
@@ -584,7 +596,9 @@ SUBROUTINE write_ts( grid )
                               grid%ts_v(n,i),                            &
                               grid%ts_psfc(n,i),                         &
                               grid%ts_tsk(n,i),                          &
-                              grid%ts_tslb(n,i)
+                              grid%ts_tslb(n,i),                         &
+                              grid%ts_tc2m(n,i),                         &
+                              grid%ts_tp2m(n,i)
 #endif
          END DO
          CLOSE(UNIT=iunit)
