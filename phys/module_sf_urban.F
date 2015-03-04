@@ -581,8 +581,9 @@ MODULE module_sf_urban
    if(ahoption==2) AH=ANTHEAT
 
    IF( ZDC+Z0C+2. >= ZA) THEN
-    CALL wrf_error_fatal ("ZDC + Z0C + 2m is larger than the 1st WRF level "// &
-                           "Stop in subroutine urban - change ZDC and Z0C" ) 
+    WRITE(mesg,*) "warning: ZDC higher than the 1st WRF level, adjusting ", ZDC, ZA-2.-Z0C-0.1 
+    CALL wrf_message ( mesg )
+    ZDC = ZA - 2. - Z0C - 0.1
    END IF
 
    IF(.NOT.LSOLAR) THEN
