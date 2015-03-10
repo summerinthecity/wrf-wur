@@ -21,18 +21,18 @@ CYCLEINDEX[04]=0
 CYCLEINDEX[05]=0
 
 # location of configuration file
-CONFIG=/home/jiska/forecast.config
+CONFIG=/home/jattema/forecast.config
 
 # working directories
-DATDIR=/data/hdd/ECMWF_OPAN
-WPSDIR=/home/jiska/WRF/tars/WPS
-RUNDIR=/home/jiska/WRF/tars/WRFV3/run
-ARCDIR=/home/jiska/archive
+DATDIR=/home/jattema/ECMWF_OPAN
+WPSDIR=/home/jattema/WRF/WPS
+RUNDIR=/home/jattema/WRF/WRFV3/run
+ARCDIR=/home/jattema/archive
 
 # location of external tools
 NCDUMP=ncdump
 NC3TONC4=nc3tonc4
-TOOLS=/home/jiska/WRF/tars/WRFV3/tools/forecast
+TOOLS=/home/jattema/WRF/WRFV3/tools/forecast
 NAMELIST=$TOOLS/namelist.py
 COPYURBAN=$TOOLS/copy_urb_init.sh
 COPYCYCLE=$TOOLS/copy_cycle.sh
@@ -564,7 +564,7 @@ function clean_output {
 
     rm -f rsl.out
     rm -f rsl.out.*
-    rm -f rs.error.*
+    rm -f rsl.error.*
     rm -f logs_${DATESTART}.zip
 
     # wrfout
@@ -712,6 +712,7 @@ function prepare_cycle {
 #    RUNDIR, NDOMS
 ######################################################################
 function prepare_sst {
+    echo "Not done"
 }
 
 ######################################################################
@@ -741,7 +742,7 @@ function run_wrf {
         exit -1
     fi
     cd $RUNDIR 
-    ./wrf.exe 2>&1
+    sbatch job.wrf
 }
 
 
