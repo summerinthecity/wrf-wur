@@ -235,7 +235,7 @@ variables:
             tp2m:standard_name = "tp2m" ; 
             tp2m:long_name = "Park 2m temperature from urban module" ;
             tp2m:least_significant_digit = 2 ;
-            tp2mtp2m:_DeflateLevel = 9;
+            tp2m:_DeflateLevel = 9;
             tp2m:_Shuffle = 1;
 
         float tc2m(time,station) ;
