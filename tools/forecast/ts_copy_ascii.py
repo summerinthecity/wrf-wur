@@ -37,7 +37,7 @@ def main():
             do_profile( filename + "QV", stationi, 'qv' )
             do_profile( filename + "PH", stationi, 'height' )
         else:
-            logging.info( "Skipping station %s", cdf.chartostring( prefix)
+            logging.info( "Skipping station %s", cdf.chartostring( prefix[stationi] ) )
 
     ncfile.close()
 
@@ -143,6 +143,8 @@ def do_tsfile(filename, stationi):
     rainc   = np.zeros([ntimes] )
     rainnc  = np.zeros([ntimes] )
     clw     = np.zeros([ntimes] )
+    tc2m    = np.zeros([ntimes] )
+    tp2m    = np.zeros([ntimes] )
 
 
     # Parse TS file, see the README.tslist in the WRF run directory for details
@@ -186,6 +188,8 @@ def do_tsfile(filename, stationi):
         rainc [ timei ] = fields[16]
         rainnc[ timei ] = fields[17]
         clw   [ timei ] = fields[18]
+        tc2m  [ timei ] = fields[19]
+        tp2m  [ timei ] = fields[20]
 
     fileTS.close()
 
@@ -207,6 +211,8 @@ def do_tsfile(filename, stationi):
     ncfile.variables['rainc'][:,stationi]   = rainc [:]
     ncfile.variables['rainnc'][:,stationi]  = rainnc[:]
     ncfile.variables['clw'][:,stationi]     = clw   [:]
+    ncfile.variables['tc2m'][:,stationi]    = tc2m  [:]
+    ncfile.variables['tp2m'][:,stationi]    = tp2m  [:]
 
     logging.info( "{} done".format( filename ) )
  
