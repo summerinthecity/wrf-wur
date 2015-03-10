@@ -2,6 +2,7 @@
 
 import netCDF4 as cdf
 import numpy   as np
+import os
 import re
 import logging
 import argparse
@@ -28,12 +29,15 @@ def main():
     for stationi in range(nstations):
         filename = "{}.d{:02d}.".format( cdf.chartostring( prefix[stationi] ), args.domain[0] )
 
-        do_tsfile ( filename + "TS", stationi )
-        do_profile( filename + "UU", stationi, 'uu' )
-        do_profile( filename + "VV", stationi, 'vv' )
-        do_profile( filename + "TH", stationi, 'th' )
-        do_profile( filename + "QV", stationi, 'qv' )
-        do_profile( filename + "PH", stationi, 'height' )
+        if os.path.isfile( filename + "TS" ):
+            do_tsfile ( filename + "TS", stationi )
+            do_profile( filename + "UU", stationi, 'uu' )
+            do_profile( filename + "VV", stationi, 'vv' )
+            do_profile( filename + "TH", stationi, 'th' )
+            do_profile( filename + "QV", stationi, 'qv' )
+            do_profile( filename + "PH", stationi, 'height' )
+        else:
+            logging.info( "Skipping station %s", cdf.chartostring( prefix)
 
     ncfile.close()
 

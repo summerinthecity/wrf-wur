@@ -1,11 +1,30 @@
 #!/bin/bash
 
-ncgen -o $1 << EOF
+HELP="""
+Create a netCDF4 file to hold the WRF timeseries output data.
+The 'tslist' file in the current directory is parsed to find the number of stations.
+
+Usage: ts_make_nc.sh <filename>
+"""
+
+
+if [ $# != 1 ]; then
+    echo $HELP
+fi
+
+exit
+
+# get the number of stations
+L=`cat tslist | wc -l`
+NSTATIONS=$(( L - 3 ))
+echo "Found $NSTATIONS in tslist"
+
+ncgen -k 4 -o $1 << EOF
 netcdf timeseries {
 
 dimensions:
         time = UNLIMITED ;  // (10 currently)
-        station = 31 ;
+        station = $NSTATIONS ;
         level = 15 ;
         strln = 50 ; 
 
