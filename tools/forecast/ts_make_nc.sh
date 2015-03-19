@@ -12,8 +12,6 @@ if [ $# != 1 ]; then
     echo $HELP
 fi
 
-exit
-
 # get the number of stations
 L=`cat tslist | wc -l`
 NSTATIONS=$(( L - 3 ))
@@ -231,6 +229,22 @@ variables:
             clw:least_significant_digit = 2 ;
             clw:_DeflateLevel = 9;
             clw:_Shuffle = 1;
+
+        float tp2m(time,station) ;
+            tp2m:units = "K" ; 
+            tp2m:standard_name = "tp2m" ; 
+            tp2m:long_name = "Park 2m temperature from urban module" ;
+            tp2m:least_significant_digit = 2 ;
+            tp2mtp2m:_DeflateLevel = 9;
+            tp2m:_Shuffle = 1;
+
+        float tc2m(time,station) ;
+            tc2m:units = "K" ; 
+            tc2m:standard_name = "tc2m" ; 
+            tc2m:long_name = "Canyon 2m temperature from urban module" ;
+            tc2m:least_significant_digit = 2 ;
+            tc2m:_DeflateLevel = 9;
+            tc2m:_Shuffle = 1;
 
 // global attributes:
                 :Conventions = "CF-1.5" ;
