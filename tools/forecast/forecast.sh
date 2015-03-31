@@ -3,6 +3,12 @@
 # abort on any error (ie. non-zero exit status)
 set -e
 
+# setup the environment on the Cartesius
+if [ `hostname | grep -i sara`]; then
+    module load python
+    module load nco
+fi
+
 # Uncomment following line for debug mode
 #set -xv
 
@@ -10,7 +16,7 @@ set -e
 # Forecast config:
 
 CYCLESTEP=24        # time between two forecast runs in hours
-CYCLELEN=24         # length of a forecast run in hours
+CYCLELEN=48         # length of a forecast run in hours
 BOUNDARYINTERVAL=6  # time between boundaries, in hours
 
 # Index in netCDF file to use for copy_cycle
@@ -702,6 +708,8 @@ function prepare_cycle {
     for d in `seq -f '%02.0f' 1 $NDOMS`; do
        $COPYURBAN ${ARCDIR}/wrfout_d${d}_${CYCLEDATE}_00:00:00.nc ${CYCLEINDEX[$d]} ${RUNDIR}/wrfinput_d${d}
        $COPYCYCLE ${ARCDIR}/wrfout_d${d}_${CYCLEDATE}_00:00:00.nc ${CYCLEINDEX[$d]} ${RUNDIR}/wrfinput_d${d}
+       echo $COPYURBAN ${ARCDIR}/wrfout_d${d}_${CYCLEDATE}_00:00:00.nc ${CYCLEINDEX[$d]} ${RUNDIR}/wrfinput_d${d}
+       echo $COPYCYCLE ${ARCDIR}/wrfout_d${d}_${CYCLEDATE}_00:00:00.nc ${CYCLEINDEX[$d]} ${RUNDIR}/wrfinput_d${d}
     done
 }
 
