@@ -71,9 +71,9 @@ fi
 tempa=${strt}.nobnds
 tempb=${strt}.daymax
 tempc=${strt}.tint
-tempd=${strt}.remap
-tempe=${strt}.last
-tempf=${strt}.kelvin
+tempd=${strt}.t
+tempe=${strt}.remap
+tempf=${strt}.fillmiss
 
 function clean {
     rm -f ${tempa} ${tempb} ${tempc} ${tempd} ${tempe} ${tempf}
@@ -93,13 +93,13 @@ cdo daymax ${tempa} ${tempb}
 # interpolate over time
 cdo inttime,2014-06-01,00:00,1days ${tempb} ${tempc}
 
+# select time step
+cdo seldate,"`date -d $WHEN +'%F'`" ${tempc} ${tempd}
+
 # inverse-distance weighted nearest neighbour
-cdo remapdis,${GRID} ${tempc} ${tempd} 
+cdo remapdis,${GRID} ${tempd} ${tempe} 
 
-# take last time step
-ncks -d time,`date -d $WHEN +'%F'` -O -o ${tempe} ${tempd}
-
-# another fill missing pass on the spatial
+# another fill missing pass
 # cdo fillmiss,4 ${tempe} sst_d0${i}.nc
 cdo remapdis,${GRID} ${tempe} ${tempf}
 
