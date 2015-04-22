@@ -618,6 +618,10 @@ function prepare_date {
     # namelist.wps   (Format: 2006-08-16_12:00:00)
     # --------------------------------------------
 
+    # Start from a clean namelist
+
+    cp $RUNDIR/namelist.forecast $RUNDIR/namelist.input
+
     # Set starting date
 
     splitdate $DATESTART YEAR MONTH DAY
@@ -703,6 +707,9 @@ function prepare_cycle {
        $COPYURBAN ${ARCDIR}/wrfout_d${d}_${CYCLEDATE}_00:00:00.nc ${CYCLEINDEX[$d]} ${RUNDIR}/wrfinput_d${d}
        $COPYCYCLE ${ARCDIR}/wrfout_d${d}_${CYCLEDATE}_00:00:00.nc ${CYCLEINDEX[$d]} ${RUNDIR}/wrfinput_d${d}
     done
+
+    # initialize the urban fields from the input files
+    $NAMELIST --set physics:sf_urban_init_from_file .true. $WPSDIR/namelist.wps
 }
 
 ######################################################################

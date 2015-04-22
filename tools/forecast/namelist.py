@@ -36,7 +36,7 @@ def main():
             path.pop(0)
 
         # dealing with different types..
-        t = type(crumb[path[0]] )
+        t = type(crumb[path[0]])
        
         if t == type( 1 ):
             crumb[ path[0] ] = int(args.set[1])
@@ -58,6 +58,15 @@ def main():
                 crumb[ path[0] ] = [float(i) for i in l]
             if t == type( '' ):
                 crumb[ path[0] ] = l
+        elif t == type( True ):
+            if args.set[1] == '.true.':
+                crumb[ path[0] ] = True
+            elif args.set[1] == '.false.':
+                crumb[ path[0] ] = False
+            else:
+                print "Cannot parse boolean, use .true. or .false."
+        else:
+            print "Unsupported type: ", t
 
         f90nml.write( namelist, args.namelist[0], force=True )
 
