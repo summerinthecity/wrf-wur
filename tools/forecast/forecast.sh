@@ -3,6 +3,12 @@
 # abort on any error (ie. non-zero exit status)
 set -e
 
+# setup the environment on the Cartesius
+if [ `hostname | grep -i sara`]; then
+    module load python
+    module load nco
+fi
+
 # Uncomment following line for debug mode
 #set -xv
 
@@ -10,7 +16,7 @@ set -e
 # Forecast config:
 
 CYCLESTEP=24        # time between two forecast runs in hours
-CYCLELEN=24         # length of a forecast run in hours
+CYCLELEN=48         # length of a forecast run in hours
 BOUNDARYINTERVAL=6  # time between boundaries, in hours
 
 # Index in netCDF file to use for copy_cycle
@@ -21,21 +27,23 @@ CYCLEINDEX[04]=0
 CYCLEINDEX[05]=0
 
 # location of configuration file
-CONFIG=/home/jiska/forecast.config
+CONFIG=/home/jattema/forecast.config
 
 # working directories
-DATDIR=/data/hdd/ECMWF_OPAN
-WPSDIR=/home/jiska/WRF/tars/WPS
-RUNDIR=/home/jiska/WRF/tars/WRFV3/run
-ARCDIR=/home/jiska/archive
+DATDIR=/home/jattema/ECMWF_OPAN
+WPSDIR=/home/jattema/WRF/WPS
+RUNDIR=/home/jattema/WRF/WRFV3/run
+ARCDIR=/home/jattema/archive
 
 # location of external tools
 NCDUMP=ncdump
 NC3TONC4=nc3tonc4
-TOOLS=/home/jiska/WRF/tars/WRFV3/tools/forecast
+TOOLS=/home/jattema/WRF/WRFV3/tools/forecast
 NAMELIST=$TOOLS/namelist.py
 COPYURBAN=$TOOLS/copy_urb_init.sh
 COPYCYCLE=$TOOLS/copy_cycle.sh
+COPYSST=$TOOLS/copy_sst_init.sh
+PREPSST=$TOOLS/prepare_sst.sh
 
 
 ##################################
@@ -49,11 +57,11 @@ Control WRF forecast runs.
    $0 command option
 
 prepare:
-  all
+  all          Runs all prepare steps in order, for cycling.
   date  <date> Set the datetime for the run, also accepts special date 'next', 
   boundaries   Download boundaries from NCEP and run ungrib, metgrid
   cycle <date> Copy cycle fields from the specified run, also accepts special date 'previous'
-  sst          Set lake temperatures
+  sst <date>   Set river and sea surface temperature, defaults to yesterday
 
 run:
   all
@@ -564,7 +572,7 @@ function clean_output {
 
     rm -f rsl.out
     rm -f rsl.out.*
-    rm -f rs.error.*
+    rm -f rsl.error.*
     rm -f logs_${DATESTART}.zip
 
     # wrfout
@@ -655,7 +663,7 @@ function prepare_boundaries {
         exit -1
     fi;
 
-    boundary_list_ecmwf_opan $DATESTART FILES
+    FILES=FIXME
 
     # clean start
     rm -f $WPSDIR/GRIBFILE.???
@@ -664,18 +672,16 @@ function prepare_boundaries {
     rm -f $WPSDIR/PRES:????-??-??_??
 
     rm -f $RUNDIR/prepare_boundaries.log
-    check_grib_version $FILES
+
     $WPSDIR/link_grib.csh $FILES    2>&1 >> $RUNDIR/prepare_boundaries.log
     $WPSDIR/ungrib.exe              2>&1 >> $RUNDIR/prepare_boundaries.log
-    $WPSDIR/util/calc_ecmwf_p.exe   2>&1 >> $RUNDIR/prepare_boundaries.log
-    if [[ `grep "^ERROR:" $RUNDIR/prepare_boundaries.log` ]]; then
-        printf "$0 [$LINENO]: Error running calc_ecmwf.exe. Aborting\n"
-        exit -1
-    fi 
     $WPSDIR/metgrid.exe             2>&1 >> $RUNDIR/prepare_boundaries.log
 
+    # clean up
     rm -f $WPSDIR/GRIBFILE.???
     rm -f $WPSDIR/FILE:????-??-??_??
+
+    # move results to RUNDIR
     mv -f $WPSDIR/met_em.d??.????-??-??_??:??:??.nc $RUNDIR
 }
 
@@ -706,6 +712,8 @@ function prepare_cycle {
     for d in `seq -f '%02.0f' 1 $NDOMS`; do
        $COPYURBAN ${ARCDIR}/wrfout_d${d}_${CYCLEDATE}_00:00:00.nc ${CYCLEINDEX[$d]} ${RUNDIR}/wrfinput_d${d}
        $COPYCYCLE ${ARCDIR}/wrfout_d${d}_${CYCLEDATE}_00:00:00.nc ${CYCLEINDEX[$d]} ${RUNDIR}/wrfinput_d${d}
+       echo $COPYURBAN ${ARCDIR}/wrfout_d${d}_${CYCLEDATE}_00:00:00.nc ${CYCLEINDEX[$d]} ${RUNDIR}/wrfinput_d${d}
+       echo $COPYCYCLE ${ARCDIR}/wrfout_d${d}_${CYCLEDATE}_00:00:00.nc ${CYCLEINDEX[$d]} ${RUNDIR}/wrfinput_d${d}
     done
 
     # initialize the urban fields from the input files
@@ -715,10 +723,26 @@ function prepare_cycle {
 ######################################################################
 # Set sea-surface temperature
 #
+# Arguments:
+#    SSTDATE  date to use for SST, defaults to: DATESTART - CYCLESTEP
+#
 # Required env:
 #    RUNDIR, NDOMS
 ######################################################################
 function prepare_sst {
+    if [ x$1 == x ]; then
+        SSTDATE=`date --date "$DATESTART $CYCLESTEP hours ago" +%F`
+    else
+        SSTDATE=$1
+    fi
+
+    cd $RUNDIR
+
+    for d in 03 04; do
+        echo "Domain $d: SSTDATE is $SSTDATE" >> prepare_boundaries.log
+        $PREPSST "$SSTDATE" ~/SST/domain_d${d}.grid $RUNDIR/sst_d${d}.nc
+        $COPYSST $RUNDIR/sst_d${d}.nc wrfinput_d${d}
+    done
 }
 
 ######################################################################
@@ -748,7 +772,7 @@ function run_wrf {
         exit -1
     fi
     cd $RUNDIR 
-    ./wrf.exe 2>&1
+    sbatch job.wrf
 }
 
 
@@ -927,9 +951,11 @@ forecastinit
 case "$1" in
     prepare)
         case "$2" in
+            "all")        prepare_date next ; prepare_boundaries ; prepare_cycle previous ; prepare_sst ;;
             "date")       prepare_date $3 ;;
             "boundaries") prepare_boundaries ;;
             "cycle")      prepare_cycle $3 ;;
+            "sst")        prepare_sst $3 ;;
         esac
     ;;
     run) 

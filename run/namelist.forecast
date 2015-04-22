@@ -1,5 +1,5 @@
  &time_control
- run_days                            = 4,
+ run_days                            = 2,
  run_hours                           = 0,
  run_minutes                         = 0,
  run_seconds                         = 0,
@@ -11,7 +11,7 @@
  start_second                        = 00,   00,   00,   00,
  end_year                            = 2014, 2014, 2014, 2014,
  end_month                           = 07,   07,   07,   07,
- end_day                             = 20,   20,   20,   20,
+ end_day                             = 18,   18,   18,   18,
  end_hour                            = 00,   00,   00,   00,
  end_minute                          = 00,   00,   00,   00,
  end_second                          = 00,   00,   00,   00,
