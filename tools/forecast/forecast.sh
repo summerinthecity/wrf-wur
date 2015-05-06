@@ -85,6 +85,9 @@ clean:
   input        Remove WRF boundaries
   output       Remove all WRF output files
 
+plot:
+  surface1     Make surface plots using script number one.
+
 status         Print forecast status
 "
 
@@ -954,7 +957,21 @@ function zip_netcdf {
     done
 }
 
+######################################################################
+# Make plots using NCL
+# Plots are made from the archived NetCDF4 files,
+# and placed in the archive directory
+######################################################################
+function plot_surface1 {
+    # Check archive status
+    archivedir $DATESTART ARCHIVE
 
+    for d in `seq -f '%02.0f' 1 $NDOMS`; do
+        NCDF4="wrfout_d${d}_${DATESTART}_00:00:00.nc" 
+        echo ncl $TOOLS/wrf_Surface1.ncl "'inputfile=\"$ARCHIVE/$NCDF4\"'"
+        ncl $TOOLS/wrf_Surface1.ncl inputfile=\"$ARCHIVE/$NCDF4\" outputfile=\"$ARCHIVE/surface1_$d.png\"
+    done
+}
 
 
 # -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
@@ -1006,6 +1023,12 @@ case "$1" in
             esac
     ;;
     status) status ; exit
+    ;;
+    plot)
+        case "$2" in
+            "surface1") plot_surface1 ;;
+            *)          echo "Plot not defined" ; exit 1 ;;
+        esac
     ;;
     archive)
         case "$2" in
