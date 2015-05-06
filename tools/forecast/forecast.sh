@@ -30,7 +30,7 @@ CYCLEINDEX[04]=25
 CONFIG=/home/jattema/forecast.config
 
 # working directories
-DATDIR=/home/jattema/ECMWF_OPAN
+DATDIR=/home/jattema/GFS
 WPSDIR=/home/jattema/WRF/WPS
 RUNDIR=/home/jattema/WRF/WRFV3/run
 ARCDIR=/home/jattema/archive
@@ -663,8 +663,6 @@ function prepare_boundaries {
         exit -1
     fi;
 
-    FILES=FIXME
-
     # clean start
     rm -f $WPSDIR/GRIBFILE.???
     rm -f $WPSDIR/FILE:????-??-??_??
@@ -673,8 +671,34 @@ function prepare_boundaries {
 
     rm -f $RUNDIR/prepare_boundaries.log
 
-    $WPSDIR/link_grib.csh $FILES    2>&1 >> $RUNDIR/prepare_boundaries.log
-    $WPSDIR/ungrib.exe              2>&1 >> $RUNDIR/prepare_boundaries.log
+    # donwload GFS
+    # FIXME: generate this list from CYCLE settings.
+    # when starting using yesterday's run hours 24 to 72:
+    # FILES="gfs.t00z.pgrb2.0p25.f024 gfs.t00z.pgrb2.0p25.f030 gfs.t00z.pgrb2.0p25.f036 gfs.t00z.pgrb2.0p25.f042 gfs.t00z.pgrb2.0p25.f048 gfs.t00z.pgrb2.0p25.f054 gfs.t00z.pgrb2.0p25.f060 gfs.t00z.pgrb2.0p25.f066 gfs.t00z.pgrb2.0p25.f072"
+    # BDATE=`date -d "yesterday $DATESTART" +'%Y%m%d00'`
+
+    # starting from today's run hours 00 to 48:
+gg
+    FILES="gfs.t00z.pgrb2.0p25.f000 gfs.t00z.pgrb2.0p25.f006 gfs.t00z.pgrb2.0p25.f012 gfs.t00z.pgrb2.0p25.f018 gfs.t00z.pgrb2.0p25.f024 gfs.t00z.pgrb2.0p25.f030 gfs.t00z.pgrb2.0p25.f036 gfs.t00z.pgrb2.0p25.f042 gfs.t00z.pgrb2.0p25.f048"
+    BDATE=`date +%F`
+    mkdir -p $DATDIR/$BDATE
+
+    ALL_PRESENT="Yes"
+    for f in $FILES; do
+        if [ ! -f $DATDIR/$BDATE/$f ]; then
+            echo "Missing: $f"
+            ALL_PRESENT="No"
+        fi
+    done 
+
+    if [ $ALL_PRESENT == "No" ]; then 
+        $TOOLS/get_gfs.pl data ${BDATE} 24 72 6 all all $DATDIR/$BDATE
+    fi
+
+    # convert to WRF input
+    cd "$WPSDIR"
+    $WPSDIR/link_grib.csh $DATDIR/$BDATE/  2>&1 >> $RUNDIR/prepare_boundaries.log
+    $WPSDIR/ungrib.exe               2>&1 >> $RUNDIR/prepare_boundaries.log
     $WPSDIR/metgrid.exe             2>&1 >> $RUNDIR/prepare_boundaries.log
 
     # clean up
