@@ -21,11 +21,10 @@ CYCLELEN=48         # length of a forecast run in hours
 BOUNDARYINTERVAL=6  # time between boundaries, in hours
 
 # Index in netCDF file to use for copy_cycle
-CYCLEINDEX[01]=0
-CYCLEINDEX[02]=0
-CYCLEINDEX[03]=0
-CYCLEINDEX[04]=0
-CYCLEINDEX[05]=0
+CYCLEINDEX[01]=9
+CYCLEINDEX[02]=25
+CYCLEINDEX[03]=25
+CYCLEINDEX[04]=25
 
 # location of configuration file
 CONFIG=/home/jattema/forecast.config
