@@ -4,9 +4,10 @@
 set -e
 
 # setup the environment on the Cartesius
-if [ `hostname | grep -i sara`]; then
+if [ `hostname | grep -i sara` ]; then
     module load python
     module load nco
+    module load ncl
 fi
 
 # Uncomment following line for debug mode
