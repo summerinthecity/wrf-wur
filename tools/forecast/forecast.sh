@@ -631,7 +631,7 @@ function prepare_date {
 
     # Start from a clean namelist
 
-    cp $RUNDIR/namelist.forecast $RUNDIR/namelist.input
+    cp "$RUNDIR/namelist.forecast" "$RUNDIR/namelist.input"
 
     # Set starting date
 
@@ -744,7 +744,7 @@ function prepare_cycle {
     done
 
     # initialize the urban fields from the input files
-    $NAMELIST --set physics:sf_urban_init_from_file .true. $WPSDIR/namelist.wps
+    $NAMELIST --set physics:sf_urban_init_from_file .true. "$RUNDIR/namelist.input"
 }
 
 ######################################################################
