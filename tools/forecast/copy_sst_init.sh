@@ -1,9 +1,8 @@
 #!/bin/bash
 
 # errors are fatal
-set -e
+#set -e
 
-TMPFILE=temp.`basename $0`.$$
 
 function usage {
         echo "`basename $0` copies urban SST field (temperature) from Rijkswaterstaat"
@@ -25,7 +24,28 @@ if [[ $# != 2 ]]; then
     usage
 fi
 
-ncks -C -O -o "${TMPFILE}" -v temperature "$1"
-ncrename -v temperature,SST "${TMPFILE}"
-ncks -A -o "$2" -v SST "${TMPFILE}"
-rm -f "${TMPFILE}"
+# Add the SST to the wrfinput
+ncrename -v temperature,SST -d time,Time "$1"
+ncks -A -o "$2" -v SST "$1"
+
+# Create a field from the input SST
+# - rename temperature to TSK
+ncks -O -o sst_new.nc -v SST "$1"
+ncrename -v SST,TSK sst_new.nc
+
+# Create a field from the input TSK
+ncks -v TSK -O -o tsk_old.nc "$2"
+
+# Merge them
+# - create mask based on land fraction
+ncks -O -o lsmask.nc -v LANDMASK "$2"
+cdo ifthenelse lsmask.nc tsk_old.nc sst_new.nc tsk_new.nc
+ncrename -d time,Time tsk_new.nc 
+
+# Add to wrfinput
+ncks -A -o "$2" -v TSK tsk_new.nc 
+
+# clean up
+rm -r tsk_old.nc tsk_new.nc lsmask.nc
+
+
