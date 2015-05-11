@@ -681,9 +681,8 @@ function prepare_boundaries {
     # BDATE=`date -d "yesterday $DATESTART" +'%Y%m%d00'`
 
     # starting from today's run hours 00 to 48:
-gg
     FILES="gfs.t00z.pgrb2.0p25.f000 gfs.t00z.pgrb2.0p25.f006 gfs.t00z.pgrb2.0p25.f012 gfs.t00z.pgrb2.0p25.f018 gfs.t00z.pgrb2.0p25.f024 gfs.t00z.pgrb2.0p25.f030 gfs.t00z.pgrb2.0p25.f036 gfs.t00z.pgrb2.0p25.f042 gfs.t00z.pgrb2.0p25.f048"
-    BDATE=`date +%F`
+    BDATE=`date -d "today $DATESTART" +'%Y%m%d00'`
     mkdir -p $DATDIR/$BDATE
 
     ALL_PRESENT="Yes"
@@ -695,7 +694,7 @@ gg
     done 
 
     if [ $ALL_PRESENT == "No" ]; then 
-        $TOOLS/get_gfs.pl data ${BDATE} 24 72 6 all all $DATDIR/$BDATE
+        $TOOLS/get_gfs.pl data ${BDATE} 0 48 6 all all $DATDIR/$BDATE
     fi
 
     # convert to WRF input
@@ -739,8 +738,6 @@ function prepare_cycle {
     for d in `seq -f '%02.0f' 1 $NDOMS`; do
        $COPYURBAN ${ARCDIR}/wrfout_d${d}_${CYCLEDATE}_00:00:00.nc ${CYCLEINDEX[$d]} ${RUNDIR}/wrfinput_d${d}
        $COPYCYCLE ${ARCDIR}/wrfout_d${d}_${CYCLEDATE}_00:00:00.nc ${CYCLEINDEX[$d]} ${RUNDIR}/wrfinput_d${d}
-       echo $COPYURBAN ${ARCDIR}/wrfout_d${d}_${CYCLEDATE}_00:00:00.nc ${CYCLEINDEX[$d]} ${RUNDIR}/wrfinput_d${d}
-       echo $COPYCYCLE ${ARCDIR}/wrfout_d${d}_${CYCLEDATE}_00:00:00.nc ${CYCLEINDEX[$d]} ${RUNDIR}/wrfinput_d${d}
     done
 
     # initialize the urban fields from the input files
