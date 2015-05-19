@@ -46,6 +46,6 @@ ncrename -d time,Time tsk_new.nc
 ncks -A -o "$2" -v TSK tsk_new.nc 
 
 # clean up
-rm -r tsk_old.nc tsk_new.nc lsmask.nc
+rm -r sst_new.nc tsk_old.nc tsk_new.nc lsmask.nc
 
 
