@@ -163,7 +163,7 @@ $URL =~ s/\${HH}/$HH/g;
 $output = '';
 
 $fhr=$hr0;
-while ($fhr <= $hr1) {
+MAINLOOP: while ($fhr <= $hr1) {
    if ($fhr <= 9) { $fhr="0$fhr"; }
    $fhr3=$fhr;
    if ($fhr <= 99) { $fhr3="0$fhr"; }
@@ -186,7 +186,7 @@ while ($fhr <= $hr1) {
       if ($err) {
          print STDERR "error code=$err,  problem reading $url$inv\n";
          sleep(10);
-         exit(8);
+         redo MAINLOOP;
       }
       open (In, "$OUTDIR/$file.tmp");
    }
@@ -207,7 +207,7 @@ while ($fhr <= $hr1) {
    if ($n == 0) {
        print STDERR "Problem reading file $url$inv\n";
        sleep(10);
-       exit(8);
+       redo MAINLOOP;
    }
 
    #
@@ -271,7 +271,7 @@ while ($fhr <= $hr1) {
       if ($err != 0) {
          print STDERR "error in getting file $err $url$grb\n";
          sleep(20);
-         exit $err;
+         redo MAINLOOP;
       }
       rename "$OUTDIR/$file.tmp", "$OUTDIR/$file";
       $output = "$output $OUTDIR/$file";
