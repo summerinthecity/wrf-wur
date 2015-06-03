@@ -9,5 +9,4 @@ source ~/.bashrc
 
 cd /home/jattema/WRF/WRFV3/run
 
-forecast.sh prepare all
-forecast.sh run real
+forecast.sh download_gfs

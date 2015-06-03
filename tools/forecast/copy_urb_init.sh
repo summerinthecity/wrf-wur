@@ -1,5 +1,6 @@
 #!/bin/bash
 
+set -e
 
 TMPFILE=temp.`basename $0`.$$
 

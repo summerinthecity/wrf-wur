@@ -35,7 +35,7 @@
 #------------ user customization section -----------------------------------------
 
 # location of curl
-$curl="curl";
+$curl="curl --retry 20";
 
 # the URLs of the inventory and grib must be defined by $URL$inv and $URL$grb
 # symbolic variables supported YYYY MM DD HH FHR (forecast hour), FHR3 (3 digit forecast hour)
@@ -164,7 +164,8 @@ $output = '';
 
 $fhr=$hr0;
 MAINLOOP: while ($fhr <= $hr1) {
-   if ($fhr <= 9) { $fhr="0$fhr"; }
+   $fhr = $fhr + 0; # convert to int to loose any prefix zeros
+   if ($fhr <= 9) { $fhr="0$fhr"; } 
    $fhr3=$fhr;
    if ($fhr <= 99) { $fhr3="0$fhr"; }
    $url = $URL;

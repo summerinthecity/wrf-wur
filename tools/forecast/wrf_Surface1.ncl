@@ -55,15 +55,10 @@ begin
     td2 =  wrf_user_getvar(a,"td2",it)   ; Td2 in C
     tc2 = wrf_user_getvar(a,"T2",it)     ; T2 in Kelvin
        tc2 = tc2-273.16                  ; T2 in C
+       tc2@units = "C"
     u10 = wrf_user_getvar(a,"U10",it)    ; u at 10 m, mass point
     v10 = wrf_user_getvar(a,"V10",it)    ; v at 10 m, mass point
 
-    tf2 = 1.8*tc2+32.                    ; Turn temperature into Fahrenheit
-      tf2@description = "Surface Temperature"
-      tf2@units = "F"
-    td_f = 1.8*td2+32.                   ; Turn temperature into Fahrenheit
-      td_f@description = "Surface Dew Point Temp" 
-      td_f@units = "F"
     u10 = u10*1.94386                    ; Turn wind into knots
     v10 = v10*1.94386
       u10@units = "kts"
@@ -74,9 +69,9 @@ begin
     ; Plotting options for T                
       opts = res                         
       opts@cnFillOn = True  
-      opts@ContourParameters = (/ -20., 90., 5./)
+      opts@ContourParameters = (/ -10., 40., 2.5/)
       opts@gsnSpreadColorEnd = -3  ; End third from the last color in color map
-      contour_tc = wrf_contour(a,wks,tf2,opts)
+      contour_tc = wrf_contour(a,wks,tc2,opts)
       delete(opts)
 
 
@@ -85,10 +80,10 @@ begin
       opts@cnFillOn = True 
       opts@cnLinesOn = True
       opts@cnLineLabelsOn = True
-      opts@ContourParameters = (/ -20., 90., 5./) 
+      opts@ContourParameters = (/ -10., 40., 2.5/) 
       opts@cnLineLabelBackgroundColor = -1
       opts@gsnSpreadColorEnd = -3  ; End third from the last color in color map
-      contour_td = wrf_contour(a,wks,td_f,opts)
+      contour_td = wrf_contour(a,wks,td2,opts)
       delete(opts)
 
 

@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH -t 4:00:00
+#SBATCH -t 3:50:00
 #SBATCH -n 1
 
 # abort on any error (ie. non-zero exit status)
