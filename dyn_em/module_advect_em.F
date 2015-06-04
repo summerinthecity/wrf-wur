@@ -6,6 +6,11 @@ MODULE module_advect_em
   USE module_model_constants
   USE module_wrf_error
 
+#ifdef WRFSTAT
+! Tak Yamaguchi 2012/03 - Collect data for module_statistics.F
+	USE module_statistics, ONLY: docollect_data_rk, uwle_eta, vwle_eta, flux_eta
+#endif
+
 CONTAINS
 
 !-------------------------------------------------------------------------------
@@ -1379,6 +1384,18 @@ SUBROUTINE advect_u   ( u, u_old, tendency,            &
             tendency(i,k,j)=tendency(i,k,j)-rdzw(k)*(vflux(i,k+1)-vflux(i,k))
          ENDDO
          ENDDO
+         
+#ifdef WRFSTAT
+	! Tak Yamaguchi 2012/03 - Collect data for module_statistics.F
+	IF ( docollect_data_rk ) THEN
+		DO k = kts, ktf
+			DO i = i_start, i_end
+				uwle_eta(i,k,j) = vflux(i,k)
+			ENDDO
+		ENDDO
+	ENDIF
+#endif /*WRFSTAT*/
+
       ENDDO
 
     ELSE IF (vert_order == 2) THEN    
@@ -2871,6 +2888,17 @@ SUBROUTINE advect_v   ( v, v_old, tendency,            &
             tendency(i,k,j)=tendency(i,k,j)-(msfvy(i,j)/msfvx(i,j))*rdzw(k)*(vflux(i,k+1)-vflux(i,k)) ! ADT eqn 45, 3rd term on RHS
          ENDDO
          ENDDO
+         
+#ifdef WRFSTAT
+	! Tak Yamaguchi 2012/03 - Collect data for module_statistics.F
+	IF ( docollect_data_rk ) THEN
+		DO k = kts, ktf
+			DO i = i_start, i_end
+				vwle_eta(i,k,j) = vflux(i,k)
+			ENDDO
+		ENDDO
+	ENDIF
+#endif /*WRFSTAT*/
 
       ENDDO
 
@@ -4206,6 +4234,17 @@ SUBROUTINE advect_scalar   ( field, field_old, tendency,    &
             tendency(i,k,j)=tendency(i,k,j)-rdzw(k)*(vflux(i,k+1)-vflux(i,k))
          ENDDO
          ENDDO
+
+#ifdef WRFSTAT
+	! Tak Yamaguchi 2012/03 - Collect data for module_statistics.F
+	IF ( docollect_data_rk ) THEN
+		DO k = kts, ktf
+			DO i = i_start, i_end
+				flux_eta(i,k,j) = vflux(i,k)
+			ENDDO
+		ENDDO
+	ENDIF
+#endif /*WRFSTAT*/
 
       ENDDO
 
@@ -9469,6 +9508,19 @@ SUBROUTINE advect_scalar_mono   ( field, field_old, tendency,    &
   ENDDO
   ENDDO
   ENDDO
+
+#ifdef WRFSTAT
+	! Tak Yamaguchi 2012/03 - Collect data for module_statistics.F
+	IF ( docollect_data_rk ) THEN
+		DO j = j_start, j_end
+			DO k = kts, ktf
+				DO i = i_start, i_end
+					flux_eta(i,k,j) = fqz (i,k,j) + fqzl(i,k,j)
+				ENDDO
+			ENDDO
+		ENDDO
+	ENDIF
+#endif /*WRFSTAT*/
 
   IF(tenddec) THEN
   DO j = j_start, j_end

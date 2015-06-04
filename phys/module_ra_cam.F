@@ -231,6 +231,12 @@ subroutine camrad(RTHRATENLW,RTHRATENSW,                           &
    USE module_wrf_error
    USE module_state_description, ONLY : SSIBSCHEME, CLMSCHEME          !ssib & clm
 
+#ifdef WRFSTAT
+        ! Tak Yamaguchi 2012/03
+        USE module_statistics, ONLY: docollect_data, radlwup_eta, radlwdn_eta, radswup_eta, &
+                                     radswdn_eta
+#endif /*WRFSTAT*/
+
 !------------------------------------------------------------------
    IMPLICIT NONE
 !------------------------------------------------------------------
@@ -894,6 +900,32 @@ subroutine camrad(RTHRATENLW,RTHRATENSW,                           &
 
    END SELECT
 !-----------------------------
+
+#ifdef WRFSTAT
+        ! Tak Yamaguchi 2012/03 - Collect data for module_statistics.F
+!       IF ( docollect_data ) THEN   ! This subroutin is called every radt. Store every call.
+                IF ( dolw ) THEN
+                        DO k = kts, kte
+                                kk = kte + 1 - k + kts
+                                DO i = its, ite
+                                        ii = i - its + 1
+                                        radlwup_eta(i,k,j) = flup(ii,kk)   ! W/m2
+                                        radlwdn_eta(i,k,j) = fldn(ii,kk)   ! W/m2
+                                ENDDO
+                        ENDDO
+                ENDIF
+                IF ( dosw ) THEN
+                        DO k = kts, kte
+                                kk = kte + 1 - k + kts
+                                DO i = its, ite
+                                        ii = i - its + 1
+                                        radswup_eta(i,k,j) = fsup(ii,kk)   ! W/m2
+                                        radswdn_eta(i,k,j) = fsdn(ii,kk)   ! W/m2
+                                ENDDO
+                        ENDDO
+                ENDIF
+!       ENDIF
+#endif /*WRFSTAT*/
 
     enddo    ! j-loop
 

@@ -211,6 +211,11 @@ SUBROUTINE rk_tendency ( config_flags, rk_step,                           &
                          its, ite, jts, jte, kts, kte,                    &
                          max_vert_cfl, max_horiz_cfl)
 
+#ifdef WRFSTAT
+	! Tak Yamaguchi 2012/03
+	USE module_statistics, ONLY: docollect_data_rk, twle_eta, flux_eta
+#endif /*WRFSTAT*/
+
    IMPLICIT NONE
 
    !  Input data.
@@ -491,6 +496,20 @@ SUBROUTINE rk_tendency ( config_flags, rk_step,                           &
                           ids, ide, jds, jde, kds, kde, &
                           ims, ime, jms, jme, kms, kme, &
                           its, ite, jts, jte, kts, kte ) 
+
+#ifdef WRFSTAT
+	! Tak Yamaguchi 2012/03 - Collect data for module_statistics.F
+!!!!!!!!!! Assuming map scale facors are 1 such as em_les cases !!!!!!!!!!
+	IF ( docollect_data_rk ) THEN
+		DO j = jts, MIN(jte,jde-1)
+			DO k = kts, MIN(kte,kde-1)
+				DO i = its, MIN(ide-1,ite)
+					twle_eta(i,k,j) = flux_eta(i,k,j)
+				ENDDO
+			ENDDO
+		ENDDO
+	ENDIF
+#endif /*WRFSTAT*/
 
      IF ( config_flags%cu_physics == GDSCHEME  .OR.     &
           config_flags%cu_physics == GFSCHEME  .OR.     &

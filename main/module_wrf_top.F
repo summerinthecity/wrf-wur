@@ -24,6 +24,10 @@ MODULE module_wrf_top
    USE module_dm, ONLY : wrf_dm_initialize
 #endif
 
+#ifdef WRFSTAT
+! Tak Yamaguchi 2012/03
+	USE module_statistics, ONLY: wrf_statistics_init
+#endif /*WRFSTAT*/
    IMPLICIT NONE
 
    REAL    :: time
@@ -392,6 +396,10 @@ CONTAINS
    END IF
 #endif
 
+#ifdef WRFSTAT
+! Tak Yamaguchi 2012/03
+	CALL wrf_statistics_init( head_grid, config_flags )
+#endif /*WRFSTAT*/
 
    END SUBROUTINE wrf_init
 

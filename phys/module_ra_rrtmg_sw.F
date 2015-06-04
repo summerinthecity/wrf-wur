@@ -9811,6 +9811,12 @@ CONTAINS
                        xcoszen,julian                             & ! jararias, 14/08/2013 
                                                                   )
 !------------------------------------------------------------------
+
+#ifdef WRFSTAT
+        ! Tak Yamaguchi 2012/03
+        USE module_statistics, ONLY: docollect_data, radswup_eta, radswdn_eta
+#endif /*WRFSTAT*/
+
    IMPLICIT NONE
 !------------------------------------------------------------------
    LOGICAL, INTENT(IN )      ::        warm_rain
@@ -10948,6 +10954,23 @@ CONTAINS
 
       endif
 !
+#ifdef WRFSTAT
+        ! Tak Yamaguchi 2012/03 - Collect data for module_statistics.F
+        !       IF ( docollect_data ) THEN   ! This subroutine is called every radt. Store every call.
+                IF ( dorrsw ) THEN
+                        DO k = kts, kte
+                                radswup_eta(i,k,j) = swuflx(1,k)   ! W/m2
+                                radswdn_eta(i,k,j) = swdflx(1,k)   ! W/m2
+                        ENDDO
+                ELSE
+                        DO k = kts, kte
+                                radswup_eta(i,k,j) = 0.   ! W/m2
+                                radswdn_eta(i,k,j) = 0.   ! W/m2
+                        ENDDO
+                ENDIF
+        !ENDIF
+#endif /*WRFSTAT*/
+
       end do i_loop
    end do j_loop                                           
 

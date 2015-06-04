@@ -610,6 +610,12 @@ SUBROUTINE MP_MORR_TWO_MOMENT(ITIMESTEP,                       &
 
 ! WVAR - STANDARD DEVIATION OF SUB-GRID VERTICAL VELOCITY (M/S)
 
+#ifdef WRFSTAT
+  ! Tak Yamaguchi 2012/04
+  USE module_statistics, ONLY: docollect_data, doavgprecflux, precipl_eta, precipi_eta, &
+                               vfmi_eta, cond_rate_eta, evap_rate_eta, deps_rate_eta, subl_rate_eta
+#endif /*WRFSTAT*/
+
    IMPLICIT NONE
 
    INTEGER,      INTENT(IN   )    ::   ids, ide, jds, jde, kds, kde , &

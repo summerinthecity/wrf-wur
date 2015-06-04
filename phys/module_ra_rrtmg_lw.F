@@ -11439,6 +11439,11 @@ CONTAINS
 !ccc To use clWRF time varying trace gases
    USE MODULE_RA_CLWRF_SUPPORT, ONLY : read_CAMgases
 
+#ifdef WRFSTAT
+        ! Tak Yamaguchi 2012/03
+        USE module_statistics, ONLY: docollect_data, radlwup_eta, radlwdn_eta
+#endif /*WRFSTAT*/
+
    IMPLICIT NONE
 !------------------------------------------------------------------
    LOGICAL, INTENT(IN )      ::        warm_rain
@@ -12531,6 +12536,17 @@ CONTAINS
          enddo
 
 !
+#ifdef WRFSTAT
+        ! Tak Yamaguchi 2012/03 - Collect data for module_statistics.F
+        ! lwupflx, lwdnflx can not be used since they are optional.
+!       IF ( docollect_data ) THEN   ! This subroutin is called every radt. Store every call.
+                DO k = kts, kte
+                        radlwup_eta(i,k,j) = uflx(1,k)   ! W/m2
+                        radlwdn_eta(i,k,j) = dflx(1,k)   ! W/m2
+                ENDDO
+!       ENDIF
+#endif /*WRFSTAT*/
+
       end do i_loop
    end do j_loop                                           
 

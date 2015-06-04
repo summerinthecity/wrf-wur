@@ -15,6 +15,10 @@ RECURSIVE SUBROUTINE integrate ( grid )
    USE module_configure
    USE module_timing
    USE module_utility
+#ifdef WRFSTAT
+! Tak Yamaguchi 2012/03
+	USE module_statistics, ONLY: wrf_statistics
+#endif /*WRFSTAT*/
 
    IMPLICIT NONE
 
@@ -304,6 +308,12 @@ RECURSIVE SUBROUTINE integrate ( grid )
             CALL dfi_accumulate ( grid )
 
             CALL med_before_solve_io ( grid , config_flags )
+            
+#ifdef WRFSTAT
+            ! Tak Yamaguchi 2012/03
+            CALL wrf_debug ( 100 , 'wrf: calling wrf_statistics' )
+            CALL wrf_statistics( grid, config_flags )
+#endif /*WRFSTAT*/
             grid_ptr => grid
             DO WHILE ( ASSOCIATED( grid_ptr ) )
                CALL set_current_grid_ptr( grid_ptr )
@@ -375,6 +385,12 @@ RECURSIVE SUBROUTINE integrate ( grid )
          ! Do check for write if the parent domain is ending.
          IF ( grid%id .EQ. 1 ) THEN               ! head_grid
             CALL med_last_solve_io ( grid , config_flags )
+            
+#ifdef WRFSTAT
+            ! Tak Yamaguchi 2012/03
+            CALL wrf_debug ( 100 , 'wrf: calling wrf_statistics' )
+            CALL wrf_statistics( grid, config_flags )
+#endif /*WRFSTAT*/
          ELSE
 ! zip up the tree and see if any ancestor is at its stop time
             should_do_last_io = domain_clockisstoptime( head_grid )
