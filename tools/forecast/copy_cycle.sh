@@ -46,8 +46,7 @@ fi
 
 
 cp "$3" "${TMPFILE}"
-ncks -C -A -o "${TMPFILE}" -d Time,$2 -v ${CYCLEFIELDS} "$1"
-mv "${TMPFILE}" "$3"
+ncks -C -A -o "${TMPFILE}" -d Time,$2 -v ${CYCLEFIELDS} "$1" && mv "${TMPFILE}" "$3"
 
 # float TSLB  (Time, soil_layers_stag, south_north, west_east) ; TSLB:description = "SOIL TEMPERATURE" ;
 # float SMOIS (Time, soil_layers_stag, south_north, west_east) ; SMOIS:description = "SOIL MOISTURE" ;
