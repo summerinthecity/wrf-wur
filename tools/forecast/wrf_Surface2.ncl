@@ -80,7 +80,7 @@ begin
     ; Plotting options for T                
       opts = res                         
       opts@cnFillOn = True  
-      opts@ContourParameters = (/ -10., 40., 2.5/)
+      opts@ContourParameters = (/  10., 40., 0.5/)
       opts@gsnSpreadColorEnd = -3  ; End third from the last color in color map
       contour_tc = wrf_contour(a,wks,tc2merged,opts)
       delete(opts)
@@ -91,7 +91,7 @@ begin
       opts@cnFillOn = True 
       opts@cnLinesOn = True
       opts@cnLineLabelsOn = True
-      opts@ContourParameters = (/ -10., 40., 2.5/) 
+      opts@ContourParameters = (/ 10., 40., 0.5/) 
       opts@cnLineLabelBackgroundColor = -1
       opts@gsnSpreadColorEnd = -3  ; End third from the last color in color map
       contour_td = wrf_contour(a,wks,td2,opts)
