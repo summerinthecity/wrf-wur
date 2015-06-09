@@ -30,7 +30,8 @@ MODULES =       module_driver_constants.o  \
                 module_dm.o                \
                 module_quilt_outbuf_ops.o  \
                 module_io_quilt.o          \
-		module_intermediate_nmm.o
+                module_statistics.o        \
+		module_intermediate_nmm.o 
 ALOBJS =\
                 module_alloc_space_0.o       \
                 module_alloc_space_1.o       \
@@ -171,6 +172,10 @@ pack_utils.o :
 module_internal_header_util.o :
 	$(CPP) $(CPPFLAGS) -I../inc module_internal_header_util.F > module_internal_header_util.f90
 	$(SFC) -c $(PROMOTION) $(FCSUFFIX) $(FCDEBUG) $(FCBASEOPTS) module_internal_header_util.f90
+
+module_integrate.o : module_statistics.o
+
+module_statistics.o : module_dm.o module_domain.o ../share/module_model_constants.o module_configure.o module_state_description.o
 
 clean:
 	@ echo 'use the clean script'
