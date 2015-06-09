@@ -877,6 +877,43 @@ SUBROUTINE MP_MORR_TWO_MOMENT(ITIMESTEP,                       &
    end do
    end do   
 
+#ifdef WRFSTAT
+  ! Tak Yamaguchi 2012/04 - Collect data for module_statistics.F
+  IF ( doavgprecflux ) THEN
+    DO i = its, ite
+      DO j = jts, jte
+        DO k = kts, kte
+          precipl_eta(i,k,j) = precipl_eta(i,k,j) + prl_flx(i,k,j) * 1.E-6   ! g/m2/s ==> mm/s
+          precipi_eta(i,k,j) = precipi_eta(i,k,j) + pri_flx(i,k,j) * 1.E-6   ! g/m2/s ==> mm/s
+        ENDDO
+      ENDDO
+    ENDDO
+  ENDIF
+  IF ( docollect_data ) THEN
+    DO i = its, ite
+      DO j = jts, jte
+        DO k = kts, kte
+          vfmi_eta(i,k,j) = vtmi(i,k,j)   ! m/s
+          cond_rate_eta(i,k,j) =   cond(i,k,j) / rho(i,k,j) / 1000.   ! g/m3/s ==> kg/kg/s
+          evap_rate_eta(i,k,j) = - evap(i,k,j) / rho(i,k,j) / 1000.   ! positively defined
+          deps_rate_eta(i,k,j) =   deps(i,k,j) / rho(i,k,j) / 1000.   ! g/m3/s ==> kg/kg/s
+          subl_rate_eta(i,k,j) = - subl(i,k,j) / rho(i,k,j) / 1000.   ! positively defined
+        ENDDO
+      ENDDO
+    ENDDO
+    IF ( .NOT.doavgprecflux ) THEN
+      DO i = its, ite
+        DO j = jts, jte
+          DO k = kts, kte
+            precipl_eta(i,k,j) = prl_flx(i,k,j) * 1.E-6   ! g/m2/s ==> mm/s
+            precipi_eta(i,k,j) = pri_flx(i,k,j) * 1.E-6   ! g/m2/s ==> mm/s
+          ENDDO
+        ENDDO
+      ENDDO
+    ENDIF
+  ENDIF
+#endif /*WRFSTAT*/
+
 END SUBROUTINE MP_MORR_TWO_MOMENT
 
 !CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC

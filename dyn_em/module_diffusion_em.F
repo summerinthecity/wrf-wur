@@ -5238,10 +5238,6 @@ END SUBROUTINE phy_bc
 	! Tak Yamaguchi 2012/03
 	USE module_statistics, ONLY: docollect_data, e_shear_eta, e_buoy_eta, e_diss_eta
 #endif /*WRFSTAT*/
-#ifdef WRFLPT
-	! Tak Yamaguchi 2012/05
-	USE module_lagrangian_parcel_tracker, ONLY: flag_lpt_3Dget, flag_lpt_sgs, diss3D
-#endif /*WRFLPT*/
 
     IMPLICIT NONE
 
