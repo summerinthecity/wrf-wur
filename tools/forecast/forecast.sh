@@ -752,8 +752,8 @@ function prepare_cycle {
 
     if [ -f "${CYCLEFILE}" ]; then
        for d in `seq -f '%02.0f' 1 $NDOMS`; do
-          ncks -C -A -o "${RUNDIR}/wrfinput_d${d}" -v ${URBANFIELDS} -d Time,${CYCLEINDEX[$d]} "${CYCLEFILE}"
-          ncks -C -A -o "${RUNDIR}/wrfinput_d${d}" -v ${CYCLEFIELDS} -d Time,${CYCLEINDEX[$d]} "${CYCLEFILE}"
+          ncks -C -A -o "${RUNDIR}/wrfinput_d${d}" -v ${URBANFIELDS} -d Time,${CYCLEINDEX[$d]} "${CYCLEFILE}" || echo "Cannot cycle urban $d"
+          ncks -C -A -o "${RUNDIR}/wrfinput_d${d}" -v ${CYCLEFIELDS} -d Time,${CYCLEINDEX[$d]} "${CYCLEFILE}" || echo "Cannot cycle soil  $d"
        done
     else
         echo "Cannot find cycle file: $CYCLEFILE"
