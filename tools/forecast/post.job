@@ -11,5 +11,5 @@ cd /home/jattema/WRF/WRFV3/run
 
 forecast.sh zip all
 forecast.sh archive all
-forecast.sh plot surface1
+forecast.sh plot surface
 forecast.sh clean all

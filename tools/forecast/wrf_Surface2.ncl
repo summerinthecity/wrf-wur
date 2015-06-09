@@ -72,6 +72,8 @@ begin
     ; merge tc2 and tc2canyon
     utype = wrf_user_getvar(a,"UTYPE_URB",it)           ; urban type 1-4: SLUCM, 0: non-urban
     tc2merged = where( utype.eq.0, tc2, tc2canyon )
+       tc2merged@units = "C"
+       tc2merged@description = tc2@description
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 

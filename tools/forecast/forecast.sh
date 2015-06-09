@@ -26,6 +26,10 @@ CYCLEINDEX[02]=25
 CYCLEINDEX[03]=25
 CYCLEINDEX[04]=25
 
+# fields to cycle from previous run
+URBANFIELDS="TC_URB,TR_URB,TB_URB,TG_URB,TS_URB,TRL_URB,TBL_URB,TGL_URB"
+CYCLEFIELDS="TSLB,SMOIS,SH2O,SMCREL,CANWAT,TSK"
+
 # location of configuration file
 CONFIG=/home/jattema/forecast.config
 
@@ -41,8 +45,6 @@ NCDUMP=ncdump
 NC3TONC4=nc3tonc4
 TOOLS=/home/jattema/WRF/WRFV3/tools/forecast
 NAMELIST=$TOOLS/namelist.py
-COPYURBAN=$TOOLS/copy_urb_init.sh
-COPYCYCLE=$TOOLS/copy_cycle.sh
 COPYSST=$TOOLS/copy_sst_init.sh
 PREPSST=$TOOLS/prepare_sst.sh
 
@@ -735,7 +737,6 @@ function prepare_boundaries {
 #    RUNDIR, NDOMS
 ######################################################################
 function prepare_cycle {
-
     if [[ -z "$NDOMS" || ! -d "$RUNDIR" ]]; then
         printf "$0 [$LINENO]: NDOMS or RUNDIR not set. Aborting\n"
         exit -1
@@ -747,13 +748,16 @@ function prepare_cycle {
     fi
     archivedir $CYCLEDATE ARCDIR
 
-    for d in `seq -f '%02.0f' 1 $NDOMS`; do
-       $COPYURBAN ${ARCDIR}/wrfout_d${d}_${CYCLEDATE}_00:00:00.nc ${CYCLEINDEX[$d]} ${RUNDIR}/wrfinput_d${d}
-       $COPYCYCLE ${ARCDIR}/wrfout_d${d}_${CYCLEDATE}_00:00:00.nc ${CYCLEINDEX[$d]} ${RUNDIR}/wrfinput_d${d}
-    done
+    CYCLEFILE="{ARCDIR}/wrfout_d${d}_${CYCLEDATE}_00:00:00.nc"
 
-    # initialize the urban fields from the input files
-#    $NAMELIST --set physics:sf_urban_init_from_file .true. "$RUNDIR/namelist.input"
+    if [ -f "${CYCLEFILE}" ]; then
+       for d in `seq -f '%02.0f' 1 $NDOMS`; do
+          ncks -C -A -o "${RUNDIR}/wrfinput_d${d}" -v ${URBANFIELDS} -d Time,${CYCLEINDEX[$d]} "${CYCLEFILE}"
+          ncks -C -A -o "${RUNDIR}/wrfinput_d${d}" -v ${CYCLEFIELDS} -d Time,${CYCLEINDEX[$d]} "${CYCLEFILE}"
+       done
+    else
+        echo "Cannot find cycle file: $CYCLEFILE"
+    fi
 }
 
 ######################################################################
@@ -974,7 +978,7 @@ function zip_netcdf {
 # Plots are made from the archived NetCDF4 files,
 # and placed in the archive directory
 ######################################################################
-function plot_surface1 {
+function plot_surface {
     if [ x$1 == "x" ]; then
         when=$DATESTART
     else
@@ -986,8 +990,7 @@ function plot_surface1 {
 
     for d in `seq -f '%02.0f' 1 $NDOMS`; do
         NCDF4="wrfout_d${d}_${when}_00:00:00.nc" 
-        echo ncl $TOOLS/wrf_Surface1.ncl "'inputfile=\"$ARCHIVE/$NCDF4\"'"
-        ncl $TOOLS/wrf_Surface1.ncl inputfile=\"$ARCHIVE/$NCDF4\" outputfile=\"$ARCHIVE/surface1_$d.png\"
+        ncl $TOOLS/wrf_Surface2.ncl inputfile=\"$ARCHIVE/$NCDF4\" outputfile=\"$ARCHIVE/surface_$d.png\"
     done
 }
 
@@ -1051,7 +1054,7 @@ case "$1" in
     ;;
     plot)
         case "$2" in
-            "surface1") plot_surface1 $3 ;;
+            "surface") plot_surface $3 ;;
             *)          echo "Plot not defined" ; exit 1 ;;
         esac
     ;;
