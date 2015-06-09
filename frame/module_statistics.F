@@ -794,9 +794,6 @@ MODULE module_statistics
 	
 		IMPLICIT NONE
 		
-#ifdef WRFLES
-		CHARACTER (LEN=50) :: casename
-#endif /*WRFLES*/
 		INTEGER :: icondavg, ierr
 		
 		NAMELIST /STAT/ &
@@ -826,19 +823,9 @@ MODULE module_statistics
 		qg_threshold = 0.
 		
 		! Read namelist variables from prm
-#ifdef WRFLES
-		OPEN(66, FILE='./CaseName', STATUS='old', FORM='formatted')
-		READ(66,*) casename
-		CLOSE(66)
-		OPEN(55, FILE='./'//TRIM(casename)//'/prm', STATUS='old', FORM='formatted')
-#else
 		OPEN(55, FILE='./stat/prm', STATUS='old', FORM='formatted')
-#endif /*WRFLES*/
 		READ(55, STAT)
 		CLOSE(55)
-#ifdef WRFLES
-		stat_file_name = TRIM(casename)//'_'//TRIM(stat_file_name)
-#endif /*WRFLES*/
 		IF (LES) CSRM = .FALSE.
 		PRINT*,'Output file name: ', TRIM(stat_file_name)
 		PRINT*,'nstat: ', nstat

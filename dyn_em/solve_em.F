@@ -2708,20 +2708,6 @@ BENCH_END(tracer_adv_tim)
 
      ENDIF other_scalar_advance
 
-#ifdef WRFLES
-! Tak Yamaguchi 2012/03 WRFLES: Upper boundary treatment
-	!$OMP PARALLEL DO   &
-	!$OMP PRIVATE ( ij )
-	DO ij = 1 , grid%num_tiles
-		CALL wrfles_upperbound( grid%ph_2, grid%phb, &
-		                        grid%t_2, moist(ims,kms,jms,p_qv), &
-		                        grid%i_start(ij), MIN(grid%i_end(ij),ide-1), &
-		                        grid%j_start(ij), MIN(grid%j_end(ij),jde-1), &
-		                        k_start, MIN(k_end,kde-1) )
-	ENDDO
-	!$OMP END PARALLEL DO
-#endif /*WRFLES*/
-
  !  update the pressure and density at the new time level
 
      !$OMP PARALLEL DO   &

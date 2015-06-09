@@ -1282,22 +1282,6 @@
 
 ! Select a scheme for calculating diffusion coefficients.
 
-#ifdef WRFLES
-	! Tak Yamaguchi 2012/07 - No SGS diffusion
-	IF ( .NOT.dosgsdif ) THEN
-		DO j = j_start, j_end
-			DO k = kts, ktf
-				DO i = i_start, i_end
-					xkmh(i,k,j) = 0.
-					xkmv(i,k,j) = 0.
-					xkhh(i,k,j) = 0.
-					xkhv(i,k,j) = 0.
-				ENDDO
-			ENDDO
-		ENDDO
-	ELSE
-#endif /*WRFLES*/
-
     km_coef: SELECT CASE( config_flags%km_opt )
 
       CASE (1)
@@ -1335,11 +1319,6 @@
             CALL wrf_error_fatal( 'Please choose diffusion coefficient scheme' )
 
     END SELECT km_coef
-
-#ifdef WRFLES
-	! Tak Yamaguchi 2012/07 - No SGS diffusion
-	ENDIF   ! IF dosgsdif
-#endif /*WRFLES*/
 
     IF ( damp_opt .eq. 1 ) THEN
       CALL cal_dampkm( config_flags, xkmh, xkhh, xkmv, xkhv,    &
