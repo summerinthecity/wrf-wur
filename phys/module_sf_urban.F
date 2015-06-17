@@ -2284,12 +2284,35 @@ MODULE module_sf_urban
 !FS
    INTEGER :: I,J,K,CHECK
 
-! JJA
-   LOGICAL :: sf_urban_init_from_file 
+!-------------------------------------------------------------------------------
+! Start WUR Modification
+!-------------------------------------------------------------------------------
    LOGICAL :: sf_urban_use_wur_config
+   LOGICAL :: sf_urban_init_from_file
 
-   CALL nl_get_sf_urban_init_from_file( 1, sf_urban_init_from_file )
    CALL nl_get_sf_urban_use_wur_config( 1, sf_urban_use_wur_config )
+
+   sf_urban_init_from_file = .FALSE.
+   DO I=ims,ime
+    DO J=jms,jme
+        IF (TC_URB2D(I,J) < 200.) THEN
+            sf_urban_use_wur_config = .TRUE.
+        ENDIF
+    ENDDO
+   ENDDO
+   IF( sf_urban_use_wur_config ) THEN
+     WRITE(mesg,*) 'VALID TC_URB2D, SLUCM TEMPERATURES FROM BOUNDARIES WILL USED'
+   ELSE
+     WRITE(mesg,*) 'INVALID TC_URB2D, SLUCM TEMPERATURES WILL BE REINITIALIZED'
+   ENDIF
+   call wrf_message(mesg)
+
+
+!-------------------------------------------------------------------------------
+! End of WUR Modification
+!-------------------------------------------------------------------------------
+
+
 
 
    CHECK = 0
@@ -2346,7 +2369,14 @@ MODULE module_sf_urban
       XXXG_URB2D(I,J)=0.
       XXXC_URB2D(I,J)=0.
 
+!-------------------------------------------------------------------------------
+! Start WUR Modification:
+!-------------------------------------------------------------------------------
 
+!  re-initialize fields from the surface scheme
+!  wnen they are not initialized from the boundaries
+
+    IF( sf_urban_init_from_file .eq. .false. ) THEN
       TC_URB2D(I,J)=TSURFACE0_URB(I,J)+0.
       TR_URB2D(I,J)=TSURFACE0_URB(I,J)+0.
       TB_URB2D(I,J)=TSURFACE0_URB(I,J)+0.
@@ -2354,29 +2384,21 @@ MODULE module_sf_urban
 !
       TS_URB2D(I,J)=TSURFACE0_URB(I,J)+0.
 
-!-------------------------------------------------------------------------------
-! Start WUR Modification:
-!-------------------------------------------------------------------------------
+      TRL_URB3D(I,1,J)=TLAYER0_URB(I,1,J)+0.
+      TRL_URB3D(I,2,J)=0.5*(TLAYER0_URB(I,1,J)+TLAYER0_URB(I,2,J))
+      TRL_URB3D(I,3,J)=TLAYER0_URB(I,2,J)+0.
+      TRL_URB3D(I,4,J)=TLAYER0_URB(I,2,J)+(TLAYER0_URB(I,3,J)-TLAYER0_URB(I,2,J))*0.29
 
-!  re-initialize fields from the surface scheme
-!  wnen they are not initialized frmo the boundaries
+      TBL_URB3D(I,1,J)=TLAYER0_URB(I,1,J)+0.
+      TBL_URB3D(I,2,J)=0.5*(TLAYER0_URB(I,1,J)+TLAYER0_URB(I,2,J))
+      TBL_URB3D(I,3,J)=TLAYER0_URB(I,2,J)+0.
+      TBL_URB3D(I,4,J)=TLAYER0_URB(I,2,J)+(TLAYER0_URB(I,3,J)-TLAYER0_URB(I,2,J))*0.29
 
-      IF(.not. sf_urban_init_from_file ) THEN
-        TRL_URB3D(I,1,J)=TLAYER0_URB(I,1,J)+0.
-        TRL_URB3D(I,2,J)=0.5*(TLAYER0_URB(I,1,J)+TLAYER0_URB(I,2,J))
-        TRL_URB3D(I,3,J)=TLAYER0_URB(I,2,J)+0.
-        TRL_URB3D(I,4,J)=TLAYER0_URB(I,2,J)+(TLAYER0_URB(I,3,J)-TLAYER0_URB(I,2,J))*0.29
+      DO K=1,num_soil_layers
+        TGL_URB3D(I,K,J)=TLAYER0_URB(I,K,J)+0.
+      END DO
+    ENDIF
 
-        TBL_URB3D(I,1,J)=TLAYER0_URB(I,1,J)+0.
-        TBL_URB3D(I,2,J)=0.5*(TLAYER0_URB(I,1,J)+TLAYER0_URB(I,2,J))
-        TBL_URB3D(I,3,J)=TLAYER0_URB(I,2,J)+0.
-        TBL_URB3D(I,4,J)=TLAYER0_URB(I,2,J)+(TLAYER0_URB(I,3,J)-TLAYER0_URB(I,2,J))*0.29
-
-        DO K=1,num_soil_layers
-          TGL_URB3D(I,K,J)=TLAYER0_URB(I,K,J)+0.
-        END DO
-
-      ENDIF
 !-------------------------------------------------------------------------------
 ! End WUR Modification
 !-------------------------------------------------------------------------------
