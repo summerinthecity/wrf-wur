@@ -37,8 +37,8 @@ variables:
             level:long_name = "level" ;
 
         int station(station) ;
-            station:standard_name = "statoin" ;
-            station:long_name = "stadion id" ; 
+            station:standard_name = "station" ;
+            station:long_name = "station id" ; 
 
         char name(station,strln) ;                                         // from tslist
             name:standard_name = "name" ; 
@@ -242,8 +242,8 @@ variables:
             level:long_name = "level" ;
 
         int station(station) ;
-            station:standard_name = "statoin" ;
-            station:long_name = "stadion id" ; 
+            station:standard_name = "station" ;
+            station:long_name = "station id" ; 
 
         char name(station,strln) ;                                         // from tslist
             name:standard_name = "name" ; 
@@ -324,8 +324,8 @@ variables:
             level:long_name = "level" ;
 
         int station(station) ;
-            station:standard_name = "statoin" ;
-            station:long_name = "stadion id" ; 
+            station:standard_name = "station" ;
+            station:long_name = "station id" ; 
 
         char name(station,strln) ;                                         // from tslist
             name:standard_name = "name" ; 
@@ -406,8 +406,8 @@ variables:
             level:long_name = "level" ;
 
         int station(station) ;
-            station:standard_name = "statoin" ;
-            station:long_name = "stadion id" ; 
+            station:standard_name = "station" ;
+            station:long_name = "station id" ; 
 
         char name(station,strln) ;                                         // from tslist
             name:standard_name = "name" ; 
@@ -488,8 +488,8 @@ variables:
             level:long_name = "level" ;
 
         int station(station) ;
-            station:standard_name = "statoin" ;
-            station:long_name = "stadion id" ; 
+            station:standard_name = "station" ;
+            station:long_name = "station id" ; 
 
         char name(station,strln) ;                                         // from tslist
             name:standard_name = "name" ; 
@@ -571,8 +571,8 @@ variables:
             level:long_name = "level" ;
 
         int station(station) ;
-            station:standard_name = "statoin" ;
-            station:long_name = "stadion id" ; 
+            station:standard_name = "station" ;
+            station:long_name = "station id" ; 
 
         char name(station,strln) ;                                         // from tslist
             name:standard_name = "name" ; 
