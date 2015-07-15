@@ -3,6 +3,7 @@
 ;   with the ARW coordinate dynamics option.
 
 load "$NCARG_ROOT/lib/ncarg/nclscripts/csm/gsn_code.ncl"
+load "$NCARG_ROOT/lib/ncarg/nclscripts/csm/gsn_csm.ncl"   
 load "$NCARG_ROOT/lib/ncarg/nclscripts/wrf/WRFUserARW.ncl"
 ;load "./WRFUserARW.ncl"
 
@@ -23,9 +24,17 @@ begin
 ; Set some basic resources
   res = True
   res@MainTitle                   = "REAL-TIME WRF"
-
+  
   pltres = True
   mpres = True
+
+; Set country outlines
+  mpres@mpFillOn                    = False        ; turn off gray fill
+  mpres@mpOutlineBoundarySets       = "National"   ; turn on country boundaries
+  mpres@mpDataBaseVersion           = "MediumRes"  ; higher resolution 
+  mpres@mpDataSetName               = "Earth..4"   ; choose more recent database
+  mpres@mpGeophysicalLineColor      = "Black"      ; color of cont. outlines
+  mpres@mpGeophysicalLineThicknessF = 2            ; thickness of outlines
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
