@@ -1,0 +1,141 @@
+
+
+maq06
+=====
+
+ $ crontab -l
+30 8 * * * /home/escience/DATA/obs/wageningen/wageningencron.sh
+0  9 * * * /home/escience/DATA/obs/veenkampen/veenkampencron.sh
+15 * * * * /home/escience/DATA/obs/watertemp/watertempcron.sh
+30  5  * * * /home/escience/DATA/obs/watertemp/forecastcron.sh
+
+0   2  * * * /home/escience/forecast/cron_post.sh     -> WRFV3/tools/forecast/post.job
+0   4  * * * /home/escience/forecast/cron_plot.sh     
+0   9  * * * /home/escience/forecast/cron_prepare.sh  -> WRFV3/tools/forecast/prepare.job
+0  12  * * * /home/escience/forecast/cron_run.sh      -> WRFV3/tools/forecast/run.job
+
+
+1) wageningen cron [LOW]
+    Downloads the last week of met station data, and adds it to the netcdf file
+    No problem if it fails, as long as it succeeds once a week
+
+2) veenkampen cron [LOW]
+    Downloads the station data of the Veenkampen, and adds it to the netcdf file
+    No problem if it fails; data not used at all. MAQ probably has their own (and better) archive.
+
+3) watertemp cron [MEDIUM]
+    Download all water temp observations from the website of Rijkswaterstaat.
+    Will download a single timestep (ie. most recent one on the website).
+
+4) forecast cron [MEDIUM]
+    Converts all downloaded watertemp observations to netcdf, and copies the file to surf sara to be used in the forecast.
+    The temperatures will be interpolated for the forecast; if this cron job fails the forecast will be the SSTs from the GFS (ie. lower temperatures in summer)
+   
+    
+6) cron_plot [MEDIUM]
+    Copies the plots from the SURFSara archive /projects/0/sitc/archie/YYYY/MM/DD/*png to the web server.
+    Website is hosted by a machine from Kees (ask him about details).
+    The filesystem is mounted (NFS) at maq06:/shared/website
+    the site is then in the Summerinthecity subdirectory.
+
+
+
+Cartesius
+=========
+
+5) post.job [HIGH]
+    forecast.sh zip ts
+    forecast.sh zip netcdf
+    forecast.sh zip log
+
+    forecast.sh archive ts
+    forecast.sh archive netcdf
+    forecast.sh archive log
+
+    forecast.sh plot surface
+
+    forecast.sh clean all
+
+7) prepare.job [HIGH]
+    forecast.sh download_gfs
+    Can run concurrent with a forecast.
+
+8) run.job [HIGH]
+    forecast.sh prepare date next
+    forecast.sh prepare boundaries
+    forecast.sh run real
+
+    -- Wait for real to finish --
+
+    forecast.sh prepare cycle previous
+    forecast.sh prepare sst
+    forecast.sh run wrf
+
+
+
+A Forecast
+==========
+
+09:00 - 10:00   forecast.sh download_gfs
+12:00 - 24:00   forecast.sh prepare date next
+                forecast.sh prepare boundaries
+                forecast.sh run real
+
+                -- Wait for real to finish --
+
+                forecast.sh prepare cycle previous
+                forecast.sh prepare sst
+                forecast.sh run wrf
+02:00 - 03:00   forecast.sh zip ts
+                forecast.sh zip netcdf
+                forecast.sh zip log
+
+                forecast.sh archive ts
+                forecast.sh archive netcdf
+                forecast.sh archive log
+
+                forecast.sh plot surface
+
+                forecast.sh clean all
+04:00           cron_plot on maq06
+
+
+
+Locations on cartesius
+======================
+
+RUNDIR
+    /home/jattema/WRF/WRFV3/run
+WPSDIR
+    /home/jattema/WRF/WPS
+Archive
+    A run is archived on the cartesius on the project filesystem (1 TB, expires ~june 2016).
+    The home dir has a (low) qutoa.
+SST
+    /home/jattema/SST
+
+
+Actions to take
+===============
+
+    0) check if a new run appears on the website
+
+    If so, no need to take any action (even if it crashes, and only shows plots for the first few hours).
+    The at least the archiving of the input boundaries was successful.
+    If not, see why not (check the slurm* files on the cartesius in the home dir (for GFS download) and RUNDIR (for the rest).
+    You can also check the email on maq06 using 'mail'... lots of mails (~5) per day even if things are ok.
+
+    1) check free space in home (weekly)
+
+    If the home disk is getting full (basically, ~ weekly, there should be enough space for a few weeks, to be sure)
+    Move the GFS boundaries to the archive:
+        from: /home/jattema/GFS
+        to:   /projects/0/sitc/GFS
+
+    2) check if boundaries are downloaded (daily / weekly)
+
+    GFS boundaries are hosted on a webserver. I did not manage to find a way to download arbitrary dates, only the last month or so is online.
+    If downloading fails, manually download the missing days. The forecast script accepts a date to download.
+
+
+    
