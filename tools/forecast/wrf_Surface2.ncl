@@ -27,6 +27,18 @@ begin
   pltres = True
   mpres = True
 
+  ; Set country outlines if high resolution borders are available
+  rangs_dir  = ncargpath("rangs")
+  rangs_file = "gshhs(0).rim"
+  if(fileexists(rangs_dir + "/" + rangs_file)) then   
+    mpres@mpFillOn                    = False        ; turn off gray fill
+    mpres@mpOutlineBoundarySets       = "National"   ; turn on country boundaries
+    mpres@mpDataSetName               = "RANGS_GSHHS"   ; set high resolution border
+    mpres@mpDataBaseVersion           = "HighRes"  ; set high resolution border
+    mpres@mpGeophysicalLineColor      = "Black"      ; color of cont. outlines
+    mpres@mpGeophysicalLineThicknessF = 2            ; thickness of outlines
+  end if
+
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
