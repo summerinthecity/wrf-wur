@@ -27,14 +27,14 @@ def namelist_get(filename, getvariable, verbose=False):
     while len(path) > 1:
         crumb = crumb[ path[0] ]
         path.pop(0)
-        if isinstance(type( crumb ), list):
-            if verbose:
-                print crumb[ int(path[0]) ]
-            return crumb[ int(path[0]) ] 
-        else:
-            if verbose:
-                print crumb[ path[0] ]
-            return crumb[ path[0] ]
+    if isinstance(crumb, list):
+        if verbose:
+            print crumb[ int(path[0]) ]
+        return crumb[ int(path[0]) ]
+    else:
+        if verbose:
+            print crumb[ path[0] ]
+        return crumb[ path[0] ]
 
 def namelist_set(filename, setvariable, setvalue, verbose=False):
     '''
