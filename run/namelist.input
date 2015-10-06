@@ -47,7 +47,7 @@
     feedback = 0
     smooth_option = 0
     max_ts_locs = 57
-
+    ts_buf_size     =         6000
     p_top_requested = 1000
     e_vert = 74, 74, 74, 74, 74
     eta_levels = 1.0,                       0.99421191128831299,  0.98958514826812849,  0.98367625218041377,   0.97655838524794414,
