@@ -2295,12 +2295,12 @@ MODULE module_sf_urban
    sf_urban_init_from_file = .FALSE.
    DO I=ims,ime
     DO J=jms,jme
-        IF (TC_URB2D(I,J) < 200.) THEN
-            sf_urban_use_wur_config = .TRUE.
+        IF (TC_URB2D(I,J) > 200. .AND. TC_URB2D(I,J) < 400.) THEN
+            sf_urban_init_from_file = .TRUE.
         ENDIF
     ENDDO
    ENDDO
-   IF( sf_urban_use_wur_config ) THEN
+   IF( sf_urban_init_from_file ) THEN
      WRITE(mesg,*) 'VALID TC_URB2D, SLUCM TEMPERATURES FROM BOUNDARIES WILL USED'
    ELSE
      WRITE(mesg,*) 'INVALID TC_URB2D, SLUCM TEMPERATURES WILL BE REINITIALIZED'
@@ -2376,7 +2376,7 @@ MODULE module_sf_urban
 !  re-initialize fields from the surface scheme
 !  wnen they are not initialized from the boundaries
 
-    IF( sf_urban_init_from_file .eq. .false. ) THEN
+    IF( sf_urban_init_from_file .eq. .FALSE. ) THEN
       TC_URB2D(I,J)=TSURFACE0_URB(I,J)+0.
       TR_URB2D(I,J)=TSURFACE0_URB(I,J)+0.
       TB_URB2D(I,J)=TSURFACE0_URB(I,J)+0.
