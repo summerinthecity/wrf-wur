@@ -33,6 +33,9 @@ CYCLEFIELDS="TSLB,SMOIS,SH2O,SMCREL,CANWAT,TSK"
 # location of configuration file
 CONFIG=/home/jattema/forecast.config
 
+# clean RUNDIR to use as startingpoint from
+TEMPLATERUNDIR=/home/jattema/WRF/WRFV3/cleanrun
+
 # working directories
 DATDIR=/home/jattema/GFS
 WPSDIR=/home/jattema/WRF/WPS
@@ -213,6 +216,12 @@ function forecastinit {
         printf "$0 [$LINENO]: NAMELIST or RUNDIR not set. Aborting\n"
         exit -1
     fi;
+
+    # create a rundir if necessary
+    if [ ! -e "${RUNDIR}" ]; then
+        log "Starting a new run from template ${TEMPLATERUNDIR} as ${RUNDIR}"
+        cp -r "${TEMPLATERUNDIR}" "${RUNDIR}"
+    fi
 
     NDOMS=`$NAMELIST --get domains:max_dom "$RUNDIR/namelist.input"`
 
