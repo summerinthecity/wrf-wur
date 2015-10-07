@@ -95,7 +95,7 @@ clean:
   output       Remove all WRF output files
 
 plot:
-  surface1     Make surface plots using script number one.
+  surface <date> Make surface plots using script number one.
 
 status         Print forecast status
 "
@@ -1006,7 +1006,7 @@ function plot_surface {
 
     for d in `seq -f '%02.0f' 1 $NDOMS`; do
         NCDF4="wrfout_d${d}_${when}_00:00:00.nc" 
-        ncl $TOOLS/wrf_Surface2.ncl inputfile=\"$ARCHIVE/$NCDF4\" outputfile=\"$ARCHIVE/surface_$d.png\"
+        ncl $TOOLS/wrf_Surface3.ncl inputfile=\"$ARCHIVE/$NCDF4\" outputfile=\"$ARCHIVE/surface_$d.png\"
     done
 }
 
