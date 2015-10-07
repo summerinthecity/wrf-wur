@@ -808,7 +808,7 @@ function prepare_sst {
     cd $RUNDIR
 
     for d in 03 04; do
-        echo "Domain $d: SSTDATE is $SSTDATE" >> prepare_boundaries.log
+        log "Domain $d: SSTDATE is $SSTDATE" >> prepare_boundaries.log
         $PREPSST "$SSTDATE" ~/SST/domain_d${d}.grid $RUNDIR/sst_d${d}.nc
         $COPYSST $RUNDIR/sst_d${d}.nc wrfinput_d${d}
         rm sst_d${d}.nc
