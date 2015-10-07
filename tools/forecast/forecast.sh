@@ -762,18 +762,31 @@ function prepare_cycle {
     else
         CYCLEDATE=$1
     fi
-    archivedir $CYCLEDATE ARCDIR
 
-    CYCLEFILE="{ARCDIR}/wrfout_d${d}_${CYCLEDATE}_00:00:00.nc"
+    for d in `seq -f '%02.0f' 1 $NDOMS`; do
 
-    if [ -f "${CYCLEFILE}" ]; then
-       for d in `seq -f '%02.0f' 1 $NDOMS`; do
-          ncks -C -A -o "${RUNDIR}/wrfinput_d${d}" -v ${URBANFIELDS} -d Time,${CYCLEINDEX[$d]} "${CYCLEFILE}" || echo "Cannot cycle urban $d"
-          ncks -C -A -o "${RUNDIR}/wrfinput_d${d}" -v ${CYCLEFIELDS} -d Time,${CYCLEINDEX[$d]} "${CYCLEFILE}" || echo "Cannot cycle soil  $d"
-       done
-    else
-        echo "Cannot find cycle file: $CYCLEFILE"
-    fi
+       # 1) Look into archive
+       archivedir $CYCLEDATE CYCLEDIR
+       CYCLEFILE="${CYCLEDIR}/wrfout_d${d}_${CYCLEDATE}_00:00:00.nc"
+       if [ -f "${CYCLEFILE}" ]; then
+          log "Cycling from file: $CYCLEFILE"
+          ncks -C -A -o "${RUNDIR}/wrfinput_d${d}" -v ${URBANFIELDS} -d Time,${CYCLEINDEX[$d]} "${CYCLEFILE}"
+          ncks -C -A -o "${RUNDIR}/wrfinput_d${d}" -v ${CYCLEFIELDS} -d Time,${CYCLEINDEX[$d]} "${CYCLEFILE}"
+          continue
+       fi
+
+       # 2) Try from a rundir
+       CYCLEFILE="${RUNDIR}/../${CYCLEDATE}/wrfout_d${d}_${CYCLEDATE}_00:00:00"
+       if [ -f "${CYCLEFILE}" ]; then
+          log "Cycling from file: $CYCLEFILE"
+          ncks -C -A -o "${RUNDIR}/wrfinput_d${d}" -v ${URBANFIELDS} -d Time,${CYCLEINDEX[$d]} "${CYCLEFILE}"
+          ncks -C -A -o "${RUNDIR}/wrfinput_d${d}" -v ${CYCLEFIELDS} -d Time,${CYCLEINDEX[$d]} "${CYCLEFILE}"
+          continue
+       fi
+
+       log "Cannot find cycle file for date: $CYCLEDATE"
+       exit -1
+    done
 }
 
 ######################################################################
