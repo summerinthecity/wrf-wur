@@ -36,9 +36,10 @@ CONFIG=/home/jattema/forecast.config
 # working directories
 DATDIR=/home/jattema/GFS
 WPSDIR=/home/jattema/WRF/WPS
-RUNDIR=/home/jattema/WRF/WRFV3/run
+RUNDIR=${RUNDIR-/home/jattema/WRF/WRFV3/run}
 #ARCDIR=/home/jattema/archive
-ARCDIR=/projects/0/sitc/archive
+#ARCDIR=/projects/0/sitc/archive
+ARCDIR=${ARCDIR-/projects/0/sitc/archive2}
 
 # location of external tools
 NCDUMP=ncdump
@@ -290,6 +291,8 @@ function archivedir {
 ######################################################################
 function help {
     printf '%s\n' "$MANUAL"
+    echo "RUNDIR: $RUNDIR"
+    echo "ARCDIR: $ARCDIR"
 }
 
 
@@ -684,7 +687,11 @@ function prepare_boundaries {
 
     if [[ ! -d "$WPSDIR"  || ! -d "$DATDIR" || ! -d "$RUNDIR" || -z "$DATESTART" ]]; then
         printf "$0 [$LINENO]: One of WPSDIR, DATDIR, RUNDIR, or DATESTART not set. Aborting\n"
-        exit -1
+        echo "WPSDIR: $WPSDIR"
+        echo "DATDIR: $DATDIR"
+        echo "RUNDIR: $RUNDIR"
+        echo "DATESTART: $DATESTART"
+        exit 1
     fi;
 
     # clean start
