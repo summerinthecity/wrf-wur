@@ -21,10 +21,10 @@ CYCLELEN=48         # length of a forecast run in hours
 BOUNDARYINTERVAL=6  # time between boundaries, in hours
 
 # Index in netCDF file to use for copy_cycle
-CYCLEINDEX[01]=9
-CYCLEINDEX[02]=25
-CYCLEINDEX[03]=25
-CYCLEINDEX[04]=25
+CYCLEINDEX[01]=8
+CYCLEINDEX[02]=24
+CYCLEINDEX[03]=24
+CYCLEINDEX[04]=24
 
 # fields to cycle from previous run
 URBANFIELDS="TC_URB,TR_URB,TB_URB,TG_URB,TS_URB,TRL_URB,TBL_URB,TGL_URB"
