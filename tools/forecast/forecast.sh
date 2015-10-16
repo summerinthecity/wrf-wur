@@ -20,11 +20,18 @@ CYCLESTEP=24        # time between two forecast runs in hours
 CYCLELEN=48         # length of a forecast run in hours
 BOUNDARYINTERVAL=6  # time between boundaries, in hours
 
-# Index in netCDF file to use for copy_cycle
+# Index in netCDF file to use for copy_cycle:
+# at midnight, 24 hours in the run:
 CYCLEINDEX[01]=8
 CYCLEINDEX[02]=24
 CYCLEINDEX[03]=24
 CYCLEINDEX[04]=24
+
+# # at midnight, at 48 hours in the run:
+# CYCLEINDEX[01]=16
+# CYCLEINDEX[02]=48
+# CYCLEINDEX[03]=48
+# CYCLEINDEX[04]=48
 
 # fields to cycle from previous run
 URBANFIELDS="TC_URB,TR_URB,TB_URB,TG_URB,TS_URB,TRL_URB,TBL_URB,TGL_URB"
@@ -769,7 +776,7 @@ function prepare_cycle {
        archivedir $CYCLEDATE CYCLEDIR
        CYCLEFILE="${CYCLEDIR}/wrfout_d${d}_${CYCLEDATE}_00:00:00.nc"
        if [ -f "${CYCLEFILE}" ]; then
-          log "Cycling from file: $CYCLEFILE"
+          log "Cycling from file: $CYCLEFILE step ${CYCLEINDEX[$d]}"
           ncks -C -A -o "${RUNDIR}/wrfinput_d${d}" -v ${URBANFIELDS} -d Time,${CYCLEINDEX[$d]} "${CYCLEFILE}"
           ncks -C -A -o "${RUNDIR}/wrfinput_d${d}" -v ${CYCLEFIELDS} -d Time,${CYCLEINDEX[$d]} "${CYCLEFILE}"
           continue
@@ -778,7 +785,7 @@ function prepare_cycle {
        # 2) Try from a rundir
        CYCLEFILE="${RUNDIR}/../${CYCLEDATE}/wrfout_d${d}_${CYCLEDATE}_00:00:00"
        if [ -f "${CYCLEFILE}" ]; then
-          log "Cycling from file: $CYCLEFILE"
+          log "Cycling from file: $CYCLEFILE step ${CYCLEINDEX[$d]}"
           ncks -C -A -o "${RUNDIR}/wrfinput_d${d}" -v ${URBANFIELDS} -d Time,${CYCLEINDEX[$d]} "${CYCLEFILE}"
           ncks -C -A -o "${RUNDIR}/wrfinput_d${d}" -v ${CYCLEFIELDS} -d Time,${CYCLEINDEX[$d]} "${CYCLEFILE}"
           continue
