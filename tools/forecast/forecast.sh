@@ -787,6 +787,7 @@ function prepare_cycle {
        log "Cannot find cycle file for date: $CYCLEDATE"
        exit -1
     done
+    $NAMELIST --set physics:sf_urban_init_from_file .true. $RUNDIR/namelist.input
 }
 
 ######################################################################

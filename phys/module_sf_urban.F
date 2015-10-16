@@ -2291,22 +2291,7 @@ MODULE module_sf_urban
    LOGICAL :: sf_urban_init_from_file
 
    CALL nl_get_sf_urban_use_wur_config( 1, sf_urban_use_wur_config )
-
-   sf_urban_init_from_file = .FALSE.
-   DO I=ims,ime
-    DO J=jms,jme
-        IF (TC_URB2D(I,J) > 200. .AND. TC_URB2D(I,J) < 400.) THEN
-            sf_urban_init_from_file = .TRUE.
-        ENDIF
-    ENDDO
-   ENDDO
-   IF( sf_urban_init_from_file ) THEN
-     WRITE(mesg,*) 'VALID TC_URB2D, SLUCM TEMPERATURES FROM BOUNDARIES WILL USED'
-   ELSE
-     WRITE(mesg,*) 'INVALID TC_URB2D, SLUCM TEMPERATURES WILL BE REINITIALIZED'
-   ENDIF
-   call wrf_message(mesg)
-
+   CALL nl_get_sf_urban_init_from_file( 1, sf_urban_init_from_file )
 
 !-------------------------------------------------------------------------------
 ! End of WUR Modification
@@ -2377,6 +2362,9 @@ MODULE module_sf_urban
 !  wnen they are not initialized from the boundaries
 
     IF( sf_urban_init_from_file .eq. .FALSE. ) THEN
+      WRITE(mesg,*) 'SLUCM TEMPERATURES WILL BE REINITIALIZED'
+      call wrf_message(mesg)
+
       TC_URB2D(I,J)=TSURFACE0_URB(I,J)+0.
       TR_URB2D(I,J)=TSURFACE0_URB(I,J)+0.
       TB_URB2D(I,J)=TSURFACE0_URB(I,J)+0.

@@ -1822,6 +1822,7 @@ rconfig   integer     bl_mynn_cloudpdf    namelist,physics      1              0
 rconfig   integer     mfshconv            namelist,physics      max_domains    1       rh       "mfshconv"         "To activate mass flux scheme with qnse, 1=true or 0=false"      ""
 rconfig   integer     sf_urban_physics    namelist,physics      max_domains    0       rh       "sf_urban_physics"     "activate urban model  0=no, 1=Noah_UCM 2=BEP_UCM"   ""
 rconfig   logical     sf_urban_use_wur_config  namelist,physics      1   .false.      rh       "sf_urban_use_wur_config"     "Urban configuration: true=use LP, LB, and HGTH from hi-res WUR urban maps, false=use URBPARM.TBL only"   ""
+rconfig   logical     sf_urban_init_from_file  namelist,physics      1   .false.      rh       "sf_urban_init_from_file"     "Urban configuration: true=use urban fields from boundaries at t=0, false=reinitialize them"              ""
 rconfig   real    BLDT                    namelist,physics      max_domains    0       h    "BLDT"          ""      ""
 rconfig   integer cu_physics              namelist,physics      max_domains    0       rh   "cu_physics"    ""      ""
 rconfig   integer shcu_physics            namelist,physics      max_domains    0       rh   "shcu_physics"  ""      ""
