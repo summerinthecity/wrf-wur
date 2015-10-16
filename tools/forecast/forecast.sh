@@ -133,7 +133,7 @@ function log {
     message=$1
 
     stamp=`date -u +"[%s] %F %T"`
-    printf '%s : %s\n' "$stamp" "$message" >> "$CONFIG"
+    printf '%s (%s): %s\n' "$stamp" "$RUNDIR" "$message" >> "$CONFIG"
 }
 
 ######################################################################
@@ -224,12 +224,6 @@ function forecastinit {
         exit -1
     fi;
 
-    # create a rundir if necessary
-    if [ ! -e "${RUNDIR}" ]; then
-        log "Starting a new run from template ${TEMPLATERUNDIR} as ${RUNDIR}"
-        cp -r "${TEMPLATERUNDIR}" "${RUNDIR}"
-    fi
-
     NDOMS=`$NAMELIST --get domains:max_dom "$RUNDIR/namelist.input"`
 
     START_Y=`$NAMELIST --get time_control:start_year:0  "$RUNDIR/namelist.input"`
@@ -307,8 +301,11 @@ function archivedir {
 ######################################################################
 function help {
     printf '%s\n' "$MANUAL"
-    echo "RUNDIR: $RUNDIR"
-    echo "ARCDIR: $ARCDIR"
+    echo
+    echo "RUNDIR:    $RUNDIR"
+    echo "ARCDIR:    $ARCDIR"
+    echo "DATESTART: $DATESTART"
+    echo "NDOMS:     $NDOMS"
 }
 
 
@@ -632,6 +629,7 @@ function clean_output {
 #    NDOMS
 ######################################################################
 function prepare_date {
+
     if [[ -z "$NDOMS" ]]; then
         printf "$0 [$LINENO]: NDOMS not set, aborting\n"
         exit 1;
@@ -916,7 +914,7 @@ function zip_log {
     OLDPWD=$PWD
     cd $RUNDIR
 
-    FILES="tslist namelist.input prepare_boundaries.log"
+    FILES="tslist namelist.input prepare_boundaries.log slurm*"
     CLEANUP="prepare_boundaries.log"
 
     # output filename depends on parallel / serial run
@@ -1049,6 +1047,12 @@ case "$1" in
         exit 0
     ;;
 esac
+
+# create a rundir if necessary
+if [ ! -e "${RUNDIR}" ]; then
+    log "Starting a new run from template ${TEMPLATERUNDIR} as ${RUNDIR}"
+    cp -r "${TEMPLATERUNDIR}" "${RUNDIR}"
+fi
 
 # parse namelist file in the run directory
 forecastinit
