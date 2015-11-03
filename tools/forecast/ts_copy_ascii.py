@@ -42,7 +42,7 @@ def main():
     parser.add_argument('-d', '--domain', metavar="domain", type=int, nargs=1, help="WRF domain number", default=0)
     args = parser.parse_args()
 
-    for varname in ['TS','UU','VV','TH','QV','PH']:
+    for varname in ['TS']: # ,'UU','VV','TH','QV','PH']:
         logging.info( "{}".format(varname) )
         ncfile = cdf.Dataset( args.netcdf[0] + "." + varname + ".nc", "r+" )
         do_tslist()
@@ -56,7 +56,7 @@ def main():
 
             if varname in ['TS',]:
                 if not ntimes:
-                    simplecount(filename + "TS")
+                    simplecount(filename + "TS", args.domain[0])
 
                 do_tsfile ( filename + "TS", stationi )
             else:
@@ -70,13 +70,21 @@ def main():
         ncfile.close()
 
 
-def simplecount(filename):
+def simplecount(filename, domain=-1):
     global    ntimes , time   , T2m    , Q2m    , U10m   , V10m   , psfc   , glw    , gsw    , hfx    , lh     , tsk    , tslb1  , rainc  , rainnc , clw    , tc2m   , tp2m   , profile 
 
-    lines = 0
-    for line in open(filename):
-        lines += 1
-    ntimes = lines - 1 # remove header
+    # lines = 0
+    # for line in open(filename):
+    #     lines += 1
+    # ntimes = lines - 1 # remove header
+
+    # override ntimes
+    # d4: ntimes = 360000
+    # d3: ntimes = 72000
+    # d2: ntimes = 14400
+    # d1: ntimes = 2880
+    override = [-1, 2880, 14400, 72000, 360000]
+    ntimes = override[ int(domain) ]
 
     time    = np.zeros([ntimes])            
     T2m     = np.zeros([ntimes,nstations])
@@ -205,22 +213,25 @@ def do_tsfile(filename, stationi):
         timei += 1
         fields = line.split()
         time  [ timei ] = fields[ 1]
-        T2m   [ timei,stationi ] = fields[ 5]
-        Q2m   [ timei,stationi ] = fields[ 6]
-        U10m  [ timei,stationi ] = fields[ 7]
-        V10m  [ timei,stationi ] = fields[ 8]
-        psfc  [ timei,stationi ] = fields[ 9]
-        glw   [ timei,stationi ] = fields[10]
-        gsw   [ timei,stationi ] = fields[11]
-        hfx   [ timei,stationi ] = fields[12]
-        lh    [ timei,stationi ] = fields[13]
-        tsk   [ timei,stationi ] = fields[14]
-        tslb1 [ timei,stationi ] = fields[15]
-        rainc [ timei,stationi ] = fields[16]
-        rainnc[ timei,stationi ] = fields[17]
-        clw   [ timei,stationi ] = fields[18]
-        tc2m  [ timei,stationi ] = fields[19]
-        tp2m  [ timei,stationi ] = fields[20]
+        try:
+            T2m   [ timei,stationi ] = fields[ 5]
+            Q2m   [ timei,stationi ] = fields[ 6]
+            U10m  [ timei,stationi ] = fields[ 7]
+            V10m  [ timei,stationi ] = fields[ 8]
+            psfc  [ timei,stationi ] = fields[ 9]
+            glw   [ timei,stationi ] = fields[10]
+            gsw   [ timei,stationi ] = fields[11]
+            hfx   [ timei,stationi ] = fields[12]
+            lh    [ timei,stationi ] = fields[13]
+            tsk   [ timei,stationi ] = fields[14]
+            tslb1 [ timei,stationi ] = fields[15]
+            rainc [ timei,stationi ] = fields[16]
+            rainnc[ timei,stationi ] = fields[17]
+            clw   [ timei,stationi ] = fields[18]
+            tc2m  [ timei,stationi ] = fields[19]
+            tp2m  [ timei,stationi ] = fields[20]
+        except:
+            print "Error parsing for time: ", timei
 
     fileTS.close()
 
