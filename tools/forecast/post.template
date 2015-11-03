@@ -1,0 +1,36 @@
+#!/bin/bash
+#SBATCH -t 3:50:00
+#SBATCH -n 1
+
+# abort on any error (ie. non-zero exit status)
+set -e
+
+source ~/.bashrc
+
+# Fill in rundir here:
+# (from a script you can do something like: cat post.job | sed "s/%RUNDIR%/$RUNDIR/" > job)
+export RUNDIR=%RUNDIR%
+
+if [ x${RUNDIR} = x ]; then
+    echo "RUNDIR not set"
+    exit -1
+fi
+
+if [ ! -d ${RUNDIR} ]; then
+    echo "RUNDIR is not a directory"
+    exit -1
+fi
+
+cd $RUNDIR
+
+forecast.sh zip ts
+forecast.sh zip netcdf
+forecast.sh zip log
+
+forecast.sh archive ts
+forecast.sh archive netcdf
+forecast.sh archive log
+
+# forecast.sh plot surface
+
+forecast.sh clean all

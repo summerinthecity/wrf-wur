@@ -1,0 +1,32 @@
+#!/bin/bash
+#SBATCH -t 2:00:00
+#SBATCH -n 1
+
+# abort on any error (ie. non-zero exit status)
+set -e
+
+source ~/.bashrc
+
+cd /home/jattema/WRF/WRFV3
+
+# Fill in rundir and startdate here:
+# (from a script you can do something like:
+#  cat run.template | sed "s=%RUNDIR%=$RUNDIR=g" | sed "s=%STARTDATE%=$STARTDATE=g" > run.job)
+export RUNDIR=%RUNDIR%
+export STARTDATE=%STARTDATE%
+
+forecast.sh prepare date $STARTDATE
+forecast.sh prepare boundaries
+
+forecast.sh run real
+while true; do
+    if [ -f "${RUNDIR}/rsl.out.0000" ]; then
+        grep "SUCCESS COMPLETE REAL_EM INIT" ${RUNDIR}/rsl.out.0000 && break
+    fi
+    echo "Waiting 10 seconds for real to finish"
+    sleep 10
+done
+
+forecast.sh prepare cycle previous
+forecast.sh prepare sst
+forecast.sh run wrf

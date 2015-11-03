@@ -1,19 +1,13 @@
 
-
-maq06
-=====
-
+General observations handling scripts
+=====================================
  $ crontab -l
+...
 30 8 * * * /home/escience/DATA/obs/wageningen/wageningencron.sh
 0  9 * * * /home/escience/DATA/obs/veenkampen/veenkampencron.sh
 15 * * * * /home/escience/DATA/obs/watertemp/watertempcron.sh
 30  5  * * * /home/escience/DATA/obs/watertemp/forecastcron.sh
-
-0   2  * * * /home/escience/forecast/cron_post.sh     -> WRFV3/tools/forecast/post.job
-0   4  * * * /home/escience/forecast/cron_plot.sh     
-0   9  * * * /home/escience/forecast/cron_prepare.sh  -> WRFV3/tools/forecast/prepare.job
-0  12  * * * /home/escience/forecast/cron_run.sh      -> WRFV3/tools/forecast/run.job
-
+...
 
 1) wageningen cron [LOW]
     Downloads the last week of met station data, and adds it to the netcdf file
@@ -31,6 +25,23 @@ maq06
     Converts all downloaded watertemp observations to netcdf, and copies the file to surf sara to be used in the forecast.
     The temperatures will be interpolated for the forecast; if this cron job fails the forecast will be the SSTs from the GFS (ie. lower temperatures in summer)
    
+
+
+
+Real time forecasting setup:
+===========================
+
+
+maq06
+=====
+
+ $ crontab -l
+0   2  * * * /home/escience/forecast/cron_post.sh     -> WRFV3/tools/forecast/post.job
+0   4  * * * /home/escience/forecast/cron_plot.sh     
+0   9  * * * /home/escience/forecast/cron_prepare.sh  -> WRFV3/tools/forecast/prepare.job
+0  12  * * * /home/escience/forecast/cron_run.sh      -> WRFV3/tools/forecast/run.job
+
+
     
 6) cron_plot [MEDIUM]
     Copies the plots from the SURFSara archive /projects/0/sitc/archie/YYYY/MM/DD/*png to the web server.
@@ -139,3 +150,34 @@ Actions to take
 
 
     
+
+
+
+===========================
+Re-forecasting setup:
+===========================
+
+ $ crontab -l
+MAILTO=escience
+0   3,9,15,21  * * * /home/escience/forecast/fc_spawn.sh
+0   6,18       * * * /home/escience/forecast/fc_reap.sh
+
+0   9  * * * /home/escience/forecast/cron_prepare.sh
+
+
+A lot of the complexity of the setup has been moved into two new scripts: 
+fc_spawn.sh
+    Looks in WRF/WRFv3 directory, finds the most recent job (ie. YYYY-MM-DD directory), and
+    checks if a new run can be started, ie. the netcdf file contains the timestep required for cycling.
+    It can be run as often as you want, i suggest every few hours or so.
+
+fc_reap.sh
+    Looks in the WRF/WRFv3 directory, finds all finished runs by reading the last line in the rsl.out.0000
+    file in a YYYY-MM-DD directory. If it contains 'wrf: SUCCESS COMPLETE WRF'; an archive job
+    is put on the queue. Do not run them too quickly after eachother, but give them some time to start.
+    Run it once or twice a day.
+
+The two scripts can work concurrently, but there can be a race condition where one jobs tries to
+read a netCDF for cycling, but another job has just moved the file to the archive.
+Therefore, run then somewhat apart.
+

@@ -27,12 +27,6 @@ CYCLEINDEX[02]=24
 CYCLEINDEX[03]=24
 CYCLEINDEX[04]=24
 
-# # at midnight, at 48 hours in the run:
-# CYCLEINDEX[01]=16
-# CYCLEINDEX[02]=48
-# CYCLEINDEX[03]=48
-# CYCLEINDEX[04]=48
-
 # fields to cycle from previous run
 URBANFIELDS="TC_URB,TR_URB,TB_URB,TG_URB,TS_URB,TRL_URB,TBL_URB,TGL_URB"
 CYCLEFIELDS="TSLB,SMOIS,SH2O,SMCREL,CANWAT,TSK"
@@ -44,7 +38,8 @@ CONFIG=/home/jattema/forecast.config
 TEMPLATERUNDIR=/home/jattema/WRF/WRFV3/cleanrun
 
 # working directories
-DATDIR=/home/jattema/GFS
+#DATDIR=/home/jattema/GFS
+DATDIR=/projects/0/sitc/GFS
 WPSDIR=/home/jattema/WRF/WPS
 RUNDIR=${RUNDIR-/home/jattema/WRF/WRFV3/run}
 #ARCDIR=/home/jattema/archive
@@ -76,7 +71,7 @@ prepare:
   all          Runs all prepare steps in order, for cycling.
   date  <date> Set the datetime for the run, also accepts special date 'next', 
   boundaries   run ungrib, metgrid
-  cycle <date> Copy cycle fields from the specified run, also accepts special date 'previous'
+  cycle <date> Copy cycle fields from the specified run, also accepts special date 'previous', 'skipone', 'recover'
   sst <date>   Set river and sea surface temperature, defaults to yesterday
 
 run:
@@ -748,12 +743,17 @@ function prepare_boundaries {
 
 ######################################################################
 # Copy urban temperature fields TRL TBL TGL, and some surface fields for cycling
-# When no date and index is given, try copying form DATESTART - CYCLESTEP
-# Note that the index in the netcdf file (CYCLEINDEX) is hardcoded at the start
-# of this file
 #
 # Arguments:
-#    CYCLEDATE (optional)
+#    CYCLEDATE must be one of:
+#         previous, or no arguments:
+#            Cycle from the previous run, 24 hours in the run
+#         skipone
+#            Cycle from the run from 2 days ago, at the end at 48 hours in the run
+#         recover
+#            Cycle from the run from 2 days ago, from midnight 24 hours in the run
+#         YYYY-MM-DD
+#            Cycle from given date
 # Required env:
 #    RUNDIR, NDOMS
 ######################################################################
@@ -764,6 +764,20 @@ function prepare_cycle {
     fi
     if [ "previous" == "$1" ]; then
         CYCLEDATE=`date --date "$DATESTART $CYCLESTEP hours ago" +%F`
+    elif [ "x" == "x$1" ]; then
+        CYCLEDATE=`date --date "$DATESTART $CYCLESTEP hours ago" +%F`
+    elif [ "skipone" == "$1" ]; then
+        DOUBLE=$(( 2 * CYCLESTEP ))
+        CYCLEDATE=`date --date "$DATESTART $DOUBLE hours ago" +%F`
+
+        ## at midnight, at 48 hours in the run:
+        CYCLEINDEX[01]=16
+        CYCLEINDEX[02]=48
+        CYCLEINDEX[03]=48
+        CYCLEINDEX[04]=48
+    elif [ "recover" == "$1" ]; then
+        DOUBLE=$(( 2 * CYCLESTEP ))
+        CYCLEDATE=`date --date "$DATESTART $DOUBLE hours ago" +%F`
     else
         CYCLEDATE=$1
     fi
