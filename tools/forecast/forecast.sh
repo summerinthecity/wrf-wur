@@ -3,6 +3,12 @@
 # abort on any error (ie. non-zero exit status)
 set -e
 
+# Working directory, 
+if [ x"$RUNDIR" == x ]; then
+    echo "RUNDIR not set, please set it first"
+    exit
+fi
+
 # setup the environment on the Cartesius
 if [ `hostname | grep -i sara` ]; then
     module load python
@@ -13,8 +19,18 @@ fi
 # Uncomment following line for debug mode
 #set -xv
 
-###########################3
-# Forecast config:
+################################################################################
+################################################################################
+#                  EDIT FORECAST CONFIGURATION HERE
+#
+#    (note: the script also parses the namelist.input for some settings)
+################################################################################
+################################################################################
+
+
+####################################
+# Forecast configuration for cycling
+#
 
 CYCLESTEP=24        # time between two forecast runs in hours
 CYCLELEN=48         # length of a forecast run in hours
@@ -31,33 +47,43 @@ CYCLEINDEX[04]=24
 URBANFIELDS="TC_URB,TR_URB,TB_URB,TG_URB,TS_URB,TRL_URB,TBL_URB,TGL_URB"
 CYCLEFIELDS="TSLB,SMOIS,SH2O,SMCREL,CANWAT,TSK"
 
-# location of configuration file
-CONFIG=/home/jattema/forecast.config
+#################################
+# Forecast directories and paths
+#
 
-# clean RUNDIR to use as startingpoint from
-TEMPLATERUNDIR=/home/jattema/WRF/WRFV3/cleanrun
+# WRF top level directories 
+# taken from environment if set (ie. export WPSDIR=...), or use defaults for Cartesius
+WPSDIR=${WPSDIR-$HOME/WRF/WPS}
+WRFDIR=${WRFDIR-$HOME/WRF/WRFV3}
 
-# working directories
-#DATDIR=/home/jattema/GFS
-DATDIR=/projects/0/sitc/GFS
-WPSDIR=/home/jattema/WRF/WPS
-RUNDIR=${RUNDIR-/home/jattema/WRF/WRFV3/run}
-#ARCDIR=/home/jattema/archive
-#ARCDIR=/projects/0/sitc/archive
+# location of log file
+FORECASTLOG=${FORECASTLOG-$HOME/forecast.config}
+
+# Top level dirs, runs will be added in subdirectories like 2015/06/03
+DATDIR=${DATDIR-/projects/0/sitc/GFS}
 ARCDIR=${ARCDIR-/projects/0/sitc/archive2}
 
+# clean RUNDIR to use as startingpoint for a run
+FORECASTTEMPLATE=${FORECASTTEMPLATE-$WRFDIR/run}
+
+# location of forecast scripts
+FORECASTTOOLS=${FORECASTTOOLS-$WRFDIR/tools/forecast}
+
 # location of external tools
-NCDUMP=ncdump
-NC3TONC4=nc3tonc4
-TOOLS=/home/jattema/WRF/WRFV3/tools/forecast
-NAMELIST=$TOOLS/namelist.py
-COPYSST=$TOOLS/copy_sst_init.sh
-PREPSST=$TOOLS/prepare_sst.sh
+NAMELIST=$FORECASTTOOLS/namelist.py
+COPYSST=$FORECASTTOOLS/copy_sst_init.sh
+PREPSST=$FORECASTTOOLS/prepare_sst.sh
+
+# Use these tools from your default path
+NCDUMP=${NCDUMP-`which ncdump`}
+NC3TONC4=${NC3TONC4-`which nc3tonc4`}
 
 
-##################################
-# FIXME read from config file
-##################################
+################################################################################
+################################################################################
+#            NO CHANGES NECESSARY BELOW THIS LINE
+################################################################################
+################################################################################
 
 
 MANUAL="
@@ -120,7 +146,7 @@ function repeat {
 }
 
 ######################################################################
-# Write a log message to the CONFIG file
+# Write a log message to the FORECASTLOG file
 # Arguments:
 #    message   Mesage to write
 ######################################################################
@@ -128,7 +154,7 @@ function log {
     message=$1
 
     stamp=`date -u +"[%s] %F %T"`
-    printf '%s (%s): %s\n' "$stamp" "$RUNDIR" "$message" >> "$CONFIG"
+    printf '%s (%s): %s\n' "$stamp" "$RUNDIR" "$message" >> "$FORECASTLOG"
 }
 
 ######################################################################
@@ -297,6 +323,7 @@ function archivedir {
 function help {
     printf '%s\n' "$MANUAL"
     echo
+    echo "TEMPLATE:  $FORECASTTEMPLATE"
     echo "RUNDIR:    $RUNDIR"
     echo "ARCDIR:    $ARCDIR"
     echo "DATESTART: $DATESTART"
@@ -684,7 +711,7 @@ function download_gfs {
     fi
     BDATE=`date -d "$when" +'%Y%m%d00'`
     mkdir -p $DATDIR/$BDATE
-    $TOOLS/get_gfs.pl data ${BDATE} 0 48 6 all all $DATDIR/$BDATE
+    $FORECASTTOOLS/get_gfs.pl data ${BDATE} 0 48 6 all all $DATDIR/$BDATE
 }
 
 ######################################################################
@@ -1039,7 +1066,7 @@ function plot_surface {
 
     for d in `seq -f '%02.0f' 1 $NDOMS`; do
         NCDF4="wrfout_d${d}_${when}_00:00:00.nc" 
-        ncl $TOOLS/wrf_Surface3.ncl inputfile=\"$ARCHIVE/$NCDF4\" outputfile=\"$ARCHIVE/surface_$d.png\"
+        ncl $FORECASTTOOLS/wrf_Surface3.ncl inputfile=\"$ARCHIVE/$NCDF4\" outputfile=\"$ARCHIVE/surface_$d.png\"
     done
 }
 
@@ -1064,8 +1091,8 @@ esac
 
 # create a rundir if necessary
 if [ ! -e "${RUNDIR}" ]; then
-    log "Starting a new run from template ${TEMPLATERUNDIR} as ${RUNDIR}"
-    cp -r "${TEMPLATERUNDIR}" "${RUNDIR}"
+    log "Starting a new run from template ${FORECASTTEMPLATE} as ${RUNDIR}"
+    cp -r "${FORECASTTEMPLATE}" "${RUNDIR}"
 fi
 
 # parse namelist file in the run directory
