@@ -3,12 +3,6 @@
 # abort on any error (ie. non-zero exit status)
 set -e
 
-# Working directory, 
-if [ x"$RUNDIR" == x ]; then
-    echo "RUNDIR not set, please set it first"
-    exit
-fi
-
 # setup the environment on the Cartesius
 if [ `hostname | grep -i sara` ]; then
     module load python
@@ -1088,6 +1082,13 @@ case "$1" in
         exit 0
     ;;
 esac
+
+# Working directory, 
+if [ x"$RUNDIR" == x ]; then
+    help
+    echo "RUNDIR not set, please set it first"
+    exit 0
+fi
 
 # create a rundir if necessary
 if [ ! -e "${RUNDIR}" ]; then
